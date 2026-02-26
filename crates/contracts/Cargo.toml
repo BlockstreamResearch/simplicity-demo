@@ -10,7 +10,7 @@ keywords = ["simplicity", "liquid", "bitcoin", "elements", "contracts"]
 categories = ["cryptography::cryptocurrencies"]
 
 [features]
-default = ["sdk-basic", "finance-options", "finance-dcd", "finance-option-offer", "simple-storage", "bytes32-tr-storage", "array-tr-storage", "smt-storage"]
+default = ["sdk-basic"]
 sdk-basic = []
 finance-options = []
 finance-dcd = []
@@ -36,6 +36,7 @@ hex = { workspace = true }
 simplicityhl = { workspace = true }
 
 simplicityhl-core = { workspace = true }
+ansi_term = "0.12.1"
 
 [dev-dependencies]
 anyhow = "1"

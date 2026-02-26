@@ -1,14 +1,14 @@
 [package]
-name = "cli"
+name = "demo"
 version = "0.1.0"
 edition = "2024"
-description = "Simplicity helper CLI for Liquid testnet"
+description = "SimplicityHL demo application"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 publish = false
 
 [[bin]]
-name = "simplicity-cli"
+name = "simplicity-demo"
 path = "src/main.rs"
 
 [lints]
@@ -34,3 +34,4 @@ contracts = { path = "../contracts" }
 simplicityhl = { workspace = true }
 
 simplicityhl-core = { workspace = true }
+ansi_term = "0.12.1"

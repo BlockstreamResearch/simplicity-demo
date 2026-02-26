@@ -1,6 +1,6 @@
 [package]
 name = "simplicityhl-core"
-version = "0.4.2"
+version = "0.4.9"
 edition = "2024"
 rust-version = "1.90"
 description = "High-level helpers for compiling and executing Simplicity programs on Liquid"
@@ -30,3 +30,5 @@ hex = { workspace = true }
 simplicityhl = { workspace = true }
 
 minreq = { workspace = true }
+base64 = "0.22.1"
+ansi_term = "0.12.1"

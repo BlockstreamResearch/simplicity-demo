@@ -1,9 +1,15 @@
+use ansi_term::Color::Yellow;
 use crate::error::TransactionBuildError;
 use crate::sdk::validation::TxOutExt;
 
 use simplicityhl::elements::bitcoin::secp256k1;
 use simplicityhl::elements::pset::{Input, Output, PartiallySignedTransaction};
 use simplicityhl::elements::{Address, OutPoint, TxOut};
+
+fn yellow(s: &str) -> String {
+    Yellow.paint(s).to_string()
+}
+
 
 /// Transfer native asset (LBTC) to another address.
 ///
@@ -17,6 +23,7 @@ pub fn transfer_native(
     to_address: &Address,
     amount_to_send: u64,
     fee_amount: u64,
+    verbose: &u8,
 ) -> Result<PartiallySignedTransaction, TransactionBuildError> {
     let (out_point, tx_out) = utxo;
 
@@ -24,6 +31,12 @@ pub fn transfer_native(
         tx_out.explicit_asset()?,
         tx_out.remaining_after_required(amount_to_send + fee_amount)?,
     );
+
+    print!("{}: ", yellow("---> Asset"));
+    if *verbose > 0 { print!("ID {} ", asset_id); } // VERBOSE
+    let lbtc_asset = "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49".parse().unwrap();
+    if asset_id == lbtc_asset { print!("(tLBTC)"); }
+    println!();
 
     let change_recipient_script = tx_out.script_pubkey.clone();
 

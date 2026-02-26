@@ -13,16 +13,16 @@ mod modules;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-use crate::commands::basic::Basic;
-use crate::commands::options::Options;
-use crate::commands::smt_storage::SMTStorage;
+use crate::commands::basic::P2pk;
+// use crate::commands::options::Options;
+// use crate::commands::smt_storage::SMTStorage;
 
 /// Command-line entrypoint for the Simplicity helper CLI.
 #[derive(Parser, Debug)]
 #[command(
-    name = "simplicity-cli",
+    name = "simplicity-demo",
     version,
-    about = "Simplicity helper CLI for Liquid testnet"
+    about = "SimplicityHL demo application for Liquid Testnet"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -32,28 +32,16 @@ struct Cli {
 /// Top-level subcommand groups.
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// P2PK and simple transaction utilities
-    Basic {
+    /// Pay to Public Key (P2PK) contract demo utilities
+    P2pk {
         #[command(subcommand)]
-        basic: Box<Basic>,
-    },
-    /// Options contract utilities
-    Options {
-        #[command(subcommand)]
-        options: Box<Options>,
-    },
-    /// Storage utilities
-    Storage {
-        #[command(subcommand)]
-        storage: Box<SMTStorage>,
+        basic: Box<P2pk>,
     },
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     match Cli::parse().command {
-        Commands::Basic { basic } => basic.handle().await,
-        Commands::Options { options } => options.handle().await,
-        Commands::Storage { storage } => storage.handle().await,
+        Commands::P2pk { basic } => basic.handle().await,
     }
 }

@@ -10,6 +10,18 @@ mod runner;
 mod scripts;
 mod tx_inclusion;
 
+use ansi_term::Style;
+use ansi_term::Color::Yellow;
+
+fn embolden(s: &str) -> String {
+    Style::new().bold().paint(s).to_string()
+}
+
+fn yellow(s: &str) -> String {
+    Yellow.paint(s).to_string()
+}
+
+
 #[cfg(feature = "encoding")]
 pub mod encoding {
     pub use bincode::{Decode, Encode};
@@ -64,6 +76,8 @@ pub mod encoding {
     }
 }
 
+pub use base64::display::Base64Display;
+pub use base64::engine::general_purpose::STANDARD;
 pub use blinder::*;
 pub use constants::*;
 pub use error::ProgramError;
@@ -97,6 +111,7 @@ use simplicityhl::value::ValueConstructible;
 use simplicityhl::{CompiledProgram, Value, WitnessValues, elements};
 
 /// Embedded Simplicity source for a basic P2PK program used to sign a single input.
+pub const SOURCE_FILENAME: &str = "source_simf/p2pk.simf";
 pub const P2PK_SOURCE: &str = include_str!("source_simf/p2pk.simf");
 
 /// Construct a P2TR address for the embedded P2PK program and the provided public key.
@@ -107,6 +122,7 @@ pub fn get_p2pk_address(
     x_only_public_key: &XOnlyPublicKey,
     network: SimplicityNetwork,
 ) -> Result<Address, ProgramError> {
+    println!("{}", embolden("# Deriving Liquid Testnet address."));
     Ok(create_p2tr_address(
         get_p2pk_program(x_only_public_key)?.commit().cmr(),
         x_only_public_key,
@@ -121,6 +137,7 @@ pub fn get_p2pk_address(
 pub fn get_p2pk_program(
     account_public_key: &XOnlyPublicKey,
 ) -> Result<CompiledProgram, ProgramError> {
+    println!("{}", embolden(&format!("# Compiling SimplicityHL program {}.", SOURCE_FILENAME)));
     let arguments = simplicityhl::Arguments::from(HashMap::from([(
         WitnessName::from_str_unchecked("PUBLIC_KEY"),
         Value::u256(U256::from_byte_array(account_public_key.serialize())),
@@ -150,6 +167,7 @@ pub fn execute_p2pk_program(
         Value::byte_array(schnorr_signature.serialize()),
     )]));
 
+    println!("\n{}\n{}", embolden("Witness values (spend-time):"), scripts::indent_four_spaces(&witness_values.to_string()));
     Ok(run_program(compiled_program, witness_values, env, runner_log_level)?.0)
 }
 
@@ -165,6 +183,7 @@ pub fn create_p2pk_signature(
     keypair: &elements::schnorr::Keypair,
     input_index: usize,
     network: SimplicityNetwork,
+    verbose: &u8,
 ) -> Result<Signature, ProgramError> {
     use simplicityhl::simplicity::hashes::Hash as _;
 
@@ -178,10 +197,12 @@ pub fn create_p2pk_signature(
         utxos,
         network,
         input_index,
+        &verbose,
     )?;
 
     let sighash_all =
         elements::secp256k1_zkp::Message::from_digest(env.c_tx_env().sighash_all().to_byte_array());
+    if *verbose > 0 { println!("{}: {}", yellow("---> Sighash"), sighash_all); } // VERBOSE
     Ok(keypair.sign_schnorr(sighash_all))
 }
 
@@ -208,6 +229,7 @@ pub fn finalize_p2pk_transaction(
     input_index: usize,
     network: SimplicityNetwork,
     log_level: TrackerLogLevel,
+    verbose: &u8,
 ) -> Result<Transaction, ProgramError> {
     let p2pk_program = get_p2pk_program(x_only_public_key)?;
 
@@ -218,8 +240,10 @@ pub fn finalize_p2pk_transaction(
         utxos,
         network,
         input_index,
+        &verbose,
     )?;
 
+    if *verbose > 0 { println!("{}: {}", yellow("---> Signature"), schnorr_signature); }  // VERBOSE
     let pruned = execute_p2pk_program(&p2pk_program, schnorr_signature, &env, log_level)?;
 
     let (simplicity_program_bytes, simplicity_witness_bytes) = pruned.to_vec_with_witness();
@@ -254,6 +278,7 @@ pub fn finalize_transaction(
     witness_values: WitnessValues,
     network: SimplicityNetwork,
     log_level: TrackerLogLevel,
+    verbose: &u8,
 ) -> Result<Transaction, ProgramError> {
     let env = get_and_verify_env(
         &tx,
@@ -262,6 +287,7 @@ pub fn finalize_transaction(
         utxos,
         network,
         input_index,
+        &verbose,
     )?;
 
     let pruned = run_program(program, witness_values, &env, log_level)?.0;
@@ -295,10 +321,17 @@ pub fn get_and_verify_env(
     utxos: &[TxOut],
     network: SimplicityNetwork,
     input_index: usize,
+    verbose: &u8,
 ) -> Result<ElementsEnv<Arc<Transaction>>, ProgramError> {
     let params = network.address_params();
     let genesis_hash = network.genesis_block_hash();
+
+    let program_bytes = program.commit().to_vec_without_witness();
+    let program_base64 = Base64Display::new(&program_bytes, &STANDARD).to_string();
+    if *verbose > 0 { println!("{}: {}", yellow("---> Compiled program base64"), program_base64); } // VERBOSE
+
     let cmr = program.commit().cmr();
+    if *verbose > 0 { println!("{}: {}", yellow("---> Compiled program CMR"), cmr); } // VERBOSE
 
     if utxos.len() <= input_index {
         return Err(ProgramError::UtxoIndexOutOfBounds {

@@ -10,7 +10,24 @@ use simplicityhl::simplicity::bitcoin::{XOnlyPublicKey, secp256k1};
 use simplicityhl::simplicity::hashes::{Hash, sha256};
 use simplicityhl::{Arguments, CompiledProgram};
 
+use base64::display::Base64Display;
+use base64::engine::general_purpose::STANDARD;
+
 use crate::error::ProgramError;
+
+use ansi_term::Style;
+
+fn embolden(s: &str) -> String {
+    Style::new().bold().paint(s).to_string()
+}
+
+pub fn indent_four_spaces(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| format!("    {}", line))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
 
 /// Load program source and compile it to a Simplicity program.
 ///
@@ -18,7 +35,19 @@ use crate::error::ProgramError;
 /// Returns error if the program fails to compile.
 pub fn load_program(source: &str, arguments: Arguments) -> Result<CompiledProgram, ProgramError> {
     let compiled =
-        CompiledProgram::new(source, arguments, true).map_err(ProgramError::Compilation)?;
+        CompiledProgram::new(source, arguments.clone(), true).map_err(ProgramError::Compilation)?;
+    println!("\n{}\n{}", embolden("SimplicityHL source code:"), indent_four_spaces(source));
+    println!("\n{}\n{}", embolden("Parameter arguments (compile-time):"), indent_four_spaces(&arguments.to_string()));
+
+    let program_bytes = compiled.commit().to_vec_without_witness();
+    let program_base64 = Base64Display::new(&program_bytes, &STANDARD).to_string();
+    let verbose: &u8 = &0; // XXX TODO inherit from actual command line argument,
+                           //          but also only display this data once per run
+    if *verbose > 0 { println!("---> Compiled program base64: {}", program_base64); } // VERBOSE
+
+    let cmr = compiled.commit().cmr();
+    if *verbose > 0 { println!("---> Compiled program CMR: {}", cmr); } // VERBOSE
+
     Ok(compiled)
 }
 
