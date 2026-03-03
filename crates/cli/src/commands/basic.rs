@@ -138,7 +138,9 @@ impl P2pk {
                 )?;
 
                 if *broadcast {
-                    println!("\n{}: {}", embolden("Broadcasted txid"), broadcast_tx(&tx).await?);
+                    let txid = broadcast_tx(&tx).await?;
+                    println!("\n{}: {}", embolden("Broadcasted txid"), txid);
+                    println!("{}: https://blockstream.info/liquidtestnet/tx/{}?expand", embolden("View details at"), txid);
                 } else {
                     println!("\n{}:\n{}", embolden("Transaction"), tx.serialize().to_lower_hex_string());
                 }
