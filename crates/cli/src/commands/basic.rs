@@ -5,6 +5,7 @@ use crate::modules::utils::derive_keypair;
 
 use crate::commands::NETWORK;
 use crate::explorer::{broadcast_tx, fetch_utxo};
+use crate::faucet::faucet_txid;
 
 use clap::Subcommand;
 use simplicityhl::elements::pset::serialize::Serialize;
@@ -31,6 +32,13 @@ pub enum P2pk {
         /// Address index (0-based)
         #[arg(long = "index", default_value_t = 0)]
         index: u32,
+        #[arg(short, long, action = clap::ArgAction::Count)]
+        verbose: u8,
+    },
+    /// Fund a Liquid Testnet address with tLBTC from the Liquid Testnet Faucet
+    FundFromFaucet {
+        #[arg(long = "address")]
+        address: Address,
         #[arg(short, long, action = clap::ArgAction::Count)]
         verbose: u8,
     },
@@ -88,6 +96,14 @@ impl P2pk {
                 if *verbose > 0 { println!("{}: {}", yellow("---> Script hash"), hex::encode(script_hash)); } // VERBOSE
                 println!("\n{}: {}", embolden("Contract's Liquid Testnet address"), address);
 
+                Ok(())
+            }
+
+            Self::FundFromFaucet { address, verbose } => {
+                println!("Connecting to faucet API...");
+                let txid = faucet_txid(&address.to_string(), verbose).expect("Faucet request failed");
+                println!("Sent tLBTC to {}.", address);
+                println!("Transaction ID: {}", txid);
                 Ok(())
             }
 

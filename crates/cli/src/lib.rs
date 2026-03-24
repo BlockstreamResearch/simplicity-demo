@@ -3,3 +3,4 @@
 pub mod commands;
 pub mod explorer;
 pub mod modules;
+pub mod faucet;

@@ -9,6 +9,7 @@
 mod commands;
 mod explorer;
 mod modules;
+mod faucet;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
