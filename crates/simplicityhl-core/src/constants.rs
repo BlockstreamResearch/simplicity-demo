@@ -11,6 +11,18 @@ use std::str::FromStr;
 
 pub const PUBLIC_SECRET_BLINDER_KEY: [u8; 32] = [1; 32];
 
+/// The BIP-0341 "nothing up my sleeve" internal key, with unknown discrete log.
+///
+/// Used as the Taproot internal key for covenant contracts (like the last-will example)
+/// that must only be spendable via their script paths, with no hidden key-path spend.
+pub static NUMS_INTERNAL_KEY: std::sync::LazyLock<simplicityhl::simplicity::bitcoin::XOnlyPublicKey> =
+    std::sync::LazyLock::new(|| {
+        simplicityhl::simplicity::bitcoin::XOnlyPublicKey::from_str(
+            "50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        )
+        .unwrap()
+    });
+
 /// `PLACEHOLDER_ISSUANCE_VALUE` constant is used for issuance and reissuance tokens during the blinding process.
 ///
 /// During blinding, the PSET collects surjection proof inputs from all outputs with matching asset IDs.

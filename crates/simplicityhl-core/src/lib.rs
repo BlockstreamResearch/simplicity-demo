@@ -6,6 +6,7 @@ mod blinder;
 mod constants;
 mod error;
 mod fee_rate_fetcher;
+mod last_will;
 mod runner;
 mod scripts;
 mod tx_inclusion;
@@ -85,6 +86,7 @@ pub use error::ProgramError;
 #[cfg(feature = "encoding")]
 pub use error::EncodingError;
 
+pub use last_will::*;
 pub use runner::*;
 pub use scripts::*;
 pub use tx_inclusion::*;
@@ -103,7 +105,6 @@ use simplicityhl::num::U256;
 use simplicityhl::simplicity::RedeemNode;
 use simplicityhl::simplicity::bitcoin::XOnlyPublicKey;
 use simplicityhl::simplicity::elements::{Address, Transaction, TxInWitness, TxOut};
-use simplicityhl::simplicity::jet::Elements;
 use simplicityhl::simplicity::jet::elements::{ElementsEnv, ElementsUtxo};
 use simplicityhl::str::WitnessName;
 use simplicityhl::tracker::TrackerLogLevel;
@@ -161,7 +162,7 @@ pub fn execute_p2pk_program(
     schnorr_signature: &Signature,
     env: &ElementsEnv<Arc<Transaction>>,
     runner_log_level: TrackerLogLevel,
-) -> Result<Arc<RedeemNode<Elements>>, ProgramError> {
+) -> Result<Arc<RedeemNode>, ProgramError> {
     let witness_values = WitnessValues::from(HashMap::from([(
         WitnessName::from_str_unchecked("SIGNATURE"),
         Value::byte_array(schnorr_signature.serialize()),

@@ -2,13 +2,14 @@
 
 use sha2::{Digest, Sha256};
 
+use simplicityhl::ast::ElementsJetHinter;
 use simplicityhl::elements::{
     Address, AddressParams, AssetId, ContractHash, OutPoint, Script, script, taproot,
 };
 
 use simplicityhl::simplicity::bitcoin::{XOnlyPublicKey, secp256k1};
 use simplicityhl::simplicity::hashes::{Hash, sha256};
-use simplicityhl::{Arguments, CompiledProgram};
+use simplicityhl::{Arguments, CompiledProgram, UnstableFeatures};
 
 use base64::display::Base64Display;
 use base64::engine::general_purpose::STANDARD;
@@ -34,8 +35,27 @@ pub fn indent_four_spaces(input: &str) -> String {
 /// # Errors
 /// Returns error if the program fails to compile.
 pub fn load_program(source: &str, arguments: Arguments) -> Result<CompiledProgram, ProgramError> {
-    let compiled =
-        CompiledProgram::new(source, arguments.clone(), true).map_err(ProgramError::Compilation)?;
+    load_program_with_unstable(source, arguments, &UnstableFeatures::none())
+}
+
+/// Load program source and compile it to a Simplicity program, enabling the given
+/// unstable compiler features (e.g. `-Z enums`).
+///
+/// # Errors
+/// Returns error if the program fails to compile.
+pub fn load_program_with_unstable(
+    source: &str,
+    arguments: Arguments,
+    unstable_features: &UnstableFeatures,
+) -> Result<CompiledProgram, ProgramError> {
+    let compiled = CompiledProgram::new_with_unstable(
+        source,
+        unstable_features,
+        arguments.clone(),
+        true,
+        Box::new(ElementsJetHinter::new()),
+    )
+    .map_err(ProgramError::Compilation)?;
     println!("\n{}\n{}", embolden("SimplicityHL source code:"), indent_four_spaces(source));
     println!("\n{}\n{}", embolden("Parameter arguments (compile-time):"), indent_four_spaces(&arguments.to_string()));
 

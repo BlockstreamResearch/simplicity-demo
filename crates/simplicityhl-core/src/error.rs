@@ -55,4 +55,13 @@ pub enum ProgramError {
 
     #[error("Input index exceeds u32 maximum: {0}")]
     InputIndexOverflow(#[from] std::num::TryFromIntError),
+
+    /// Returned when a compiled program doesn't declare a witness of the expected name.
+    #[error("Program does not declare a witness named {name:?}")]
+    MissingWitnessType { name: String },
+
+    /// Returned when a witness value doesn't match the type the program declares for it
+    /// (e.g. no enum variant with that name, or the payload doesn't fit).
+    #[error("Witness {name:?} does not accept the given value")]
+    InvalidWitnessValue { name: String },
 }
