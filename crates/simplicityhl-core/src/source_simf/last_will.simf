@@ -1,0 +1,81 @@
+/*
+ * LAST WILL
+ *
+ * The inheritor can spend the coins if the owner doesn't move them for
+ * MIN_DISTANCE_BLOCKS blocks. The owner has to repeat the covenant when
+ * they move the coins with their hot key. The owner can break out of the
+ * covenant with their cold key.
+ *
+ * Requires -Z enums to run this example.
+ *
+ * Adapted from https://github.com/BlockstreamResearch/SimplicityHL/blob/master/examples/last_will.simf
+ * The original example enforced its timelock with jet::broken_do_not_use_check_lock_distance,
+ * which SimplicityHL's maintainers renamed and deprecated: that jet checks the maximum
+ * relative-locktime distance across ALL of a transaction's inputs, not the distance actually
+ * committed by the specific input being spent, so a spender could defeat it by attaching an
+ * unrelated extra input with a high sequence value. `enforce_relative_distance` below replaces
+ * it with a manual, per-input check built from jet::current_sequence(), following
+ * https://github.com/BlockstreamResearch/simplicityhl-std/pull/45.
+ */
+fn checksig(pk: Pubkey, sig: Signature) {
+    let msg: u256 = jet::sig_all_hash();
+    jet::bip_0340_verify((pk, msg), sig);
+}
+
+// Assert that the current input is spent in a transaction that can only appear a
+// distance of at least min_distance blocks after the block containing the input's UTXO.
+// Panics otherwise. This is a non-broken replacement for jet::broken_do_not_use_check_lock_distance.
+fn enforce_relative_distance(min_distance: Distance) {
+    // Transaction version must be at least 2 for BIP68 relative locktime to apply.
+    assert!(jet::le_32(2, jet::version()));
+
+    // Fetch and parse the current input's own sequence number.
+    let actual_data: Either<Distance, Duration> = unwrap(jet::parse_sequence(jet::current_sequence()));
+    let actual_distance: Distance = unwrap_left::<Duration>(actual_data);
+
+    assert!(jet::le_16(min_distance, actual_distance));
+}
+
+// Enforce the covenant to repeat in the first output.
+//
+// Elements has explicit fee outputs, so enforce a fee output in the second output.
+// Disallow further outputs.
+fn recursive_covenant() {
+    assert!(jet::eq_32(jet::num_outputs(), 2));
+    let this_script_hash: u256 = jet::current_script_hash();
+    let output_script_hash: u256 = unwrap(jet::output_script_hash(0));
+    assert!(jet::eq_256(this_script_hash, output_script_hash));
+    assert!(unwrap(jet::output_is_fee(1)));
+}
+
+fn inherit_spend(inheritor_sig: Signature) {
+    let min_distance: Distance = param::MIN_DISTANCE_BLOCKS;
+    enforce_relative_distance(min_distance);
+    let inheritor_pk: Pubkey = param::INHERITOR_PUBLIC_KEY;
+    checksig(inheritor_pk, inheritor_sig);
+}
+
+fn cold_spend(cold_sig: Signature) {
+    let cold_pk: Pubkey = param::COLD_PUBLIC_KEY;
+    checksig(cold_pk, cold_sig);
+}
+
+fn refresh_spend(hot_sig: Signature) {
+    let hot_pk: Pubkey = param::HOT_PUBLIC_KEY;
+    checksig(hot_pk, hot_sig);
+    recursive_covenant();
+}
+
+enum Action {
+    Inherit(Signature),
+    ColdSpend(Signature),
+    HotSpend(Signature),
+}
+
+fn main() {
+    match witness::ACTION {
+        Action::Inherit(sig: Signature) => inherit_spend(sig),
+        Action::ColdSpend(sig: Signature) => cold_spend(sig),
+        Action::HotSpend(sig: Signature) => refresh_spend(sig),
+    }
+}
