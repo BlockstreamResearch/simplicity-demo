@@ -1,0 +1,2202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Allowance covenant: lwk_wasm demo</title>
+<style>
+  :root {
+    --bg: #fbfbfa; --fg: #1a1a18; --muted: #6b6b66; --line: #ddddd6;
+    --panel: #ffffff; --accent: #2f5d50; --warn: #8a4b1e; --err: #8c2f2f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-block: 24px; padding-left: 20px; padding-right: 20px;
+         background: var(--bg); color: var(--fg);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 10px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  section { background: var(--panel); border: 1px solid var(--line);
+            border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 2px; }
+  input[type=text], input[type=number] { width: 100%; padding: 7px 9px; font: inherit;
+          border: 1px solid var(--line); border-radius: 5px; background: #fff; color: inherit; }
+  input[type=checkbox] { margin-right: 6px; }
+  button { font: inherit; padding: 7px 13px; border-radius: 5px; border: 1px solid var(--accent);
+           background: var(--accent); color: #fff; cursor: pointer; margin: 10px 6px 0 0; }
+  button.secondary { background: #fff; color: var(--accent); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; }
+  .row > div { flex: 1 1 200px; min-width: 0; }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+                word-break: break-all; }
+  .out { margin-top: 10px; padding: 9px 11px; border-radius: 5px; background: #f4f4f1;
+         border: 1px solid var(--line); white-space: pre-wrap; }
+  .out:empty { display: none; }
+  .err { color: var(--err); }
+  .warn { color: var(--warn); }
+  .note { font-size: 13px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13.5px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  .tablewrap { overflow-x: auto; }
+  .role { float: right; font-size: 11px; font-weight: 600; letter-spacing: .04em;
+          text-transform: uppercase; padding: 2px 8px; border-radius: 10px;
+          background: #eef2f0; color: var(--accent); border: 1px solid #d6e0db; }
+  .role.ben { background: #f4eef2; color: #6d3353; border-color: #e3d4dd; }
+  /* A div given display:flex would otherwise ignore the hidden attribute. */
+  [hidden] { display: none !important; }
+  #confirm-modal { position: fixed; inset: 0; z-index: 50; display: flex;
+                   align-items: center; justify-content: center; padding: 20px;
+                   background: rgba(26, 26, 24, .45); }
+  #confirm-panel { background: var(--panel); border: 1px solid var(--line);
+                   border-radius: 8px; padding: 18px; max-width: 520px; width: 100%;
+                   box-shadow: 0 10px 40px rgba(0,0,0,.18); }
+  #confirm-panel h2 { margin-bottom: 6px; }
+  #confirm-body { white-space: pre-wrap; background: #f4f4f1; border: 1px solid var(--line);
+                  border-radius: 5px; padding: 10px 12px; margin: 10px 0 4px; }
+  #facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px;
+           font-size: 13px; margin: 0; }
+  #facts dt { color: var(--muted); }
+  #facts dd { margin: 0; word-break: break-all; }
+  #facts .ok { color: var(--accent); font-weight: 600; }
+  #facts .no { color: var(--muted); }
+  #facts .alert { color: var(--warn); font-weight: 600; }
+  a { color: var(--accent); }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+  .tab-btn { background: #fff; color: var(--fg); border: 1px solid var(--line);
+             margin: 0; font-size: 14px; }
+  .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .hint-inline { font-size: 12.5px; color: var(--muted); display: block; margin-top: 3px; }
+  .warning { border-left: 3px solid var(--warn); background: #fdf6ef; padding: 10px 13px;
+             border-radius: 5px; font-size: 13.5px; }
+  textarea { width: 100%; padding: 7px 9px; font-family: ui-monospace, Menlo, monospace;
+             font-size: 12.5px; border: 1px solid var(--line); border-radius: 5px;
+             background: #fff; color: inherit; resize: vertical; }
+  details { margin-top: 10px; font-size: 13.5px; }
+  summary { cursor: pointer; color: var(--accent); }
+  .about h3 { font-size: 14px; margin: 16px 0 6px; }
+  @keyframes arrived { from { background: #e4efe9; } to { background: #fff; } }
+  .arrived { animation: arrived 1.4s ease-out; }
+  .about p, .about li { font-size: 13.5px; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Allowance covenant <span class="role" id="signer-chip">in-page signing</span></h1>
+<p class="sub">A benefactor locks testnet L-BTC in a Simplicity covenant; a beneficiary
+withdraws a fixed amount, no more often than once every N blocks, until it is empty.
+Everything can run in this page (contract compilation, signing and broadcasting) with no
+backend and no browser extension, or the same contract can be handed to a wallet as a
+txmanifest.</p>
+
+
+<section>
+  <h2>Library</h2>
+  <p class="note">Loaded automatically when this page opens: <code>vendor/lwk_wasm.js</code>,
+  the wasm it initialises, and a check that this build really has the Simplicity feature
+  compiled in. It also restores whatever this browser already knew, including your key,
+  your terms and your payout address, so a reload puts you back where you were.</p>
+  <div class="out" id="out-load"></div>
+</section>
+
+<section>
+  <h2>Where you are</h2>
+  <dl id="facts">
+    <dt>library</dt><dd id="f-lib" class="no">not loaded</dd>
+    <dt>wallet</dt><dd id="f-wallet" class="no">not open</dd>
+    <dt>balance</dt><dd id="f-balance" class="no">unknown</dd>
+    <dt>your key</dt><dd id="f-key" class="no">not generated</dd>
+    <dt>contract</dt><dd id="f-contract" class="no">not compiled</dd>
+    <dt>can fund</dt><dd id="f-can-fund" class="no">unknown</dd>
+    <dt>can withdraw</dt><dd id="f-can-withdraw" class="no">unknown</dd>
+    <dt>withdrawal fee</dt><dd id="f-fee">unknown</dd>
+  </dl>
+</section>
+
+<section>
+  <h2>Who signs</h2>
+  <p class="note">Two ways to run the same contract. They are not interchangeable for a single
+  allowance: Humid signs with its own BIP-84 key, so <code>BENEFICIARY_KEY</code>, and
+  therefore the covenant address, differs between them. Pick one before compiling.</p>
+  <label><input type="radio" name="signer" value="page" checked> <strong>This page</strong>:
+  <code>lwk_wasm</code> compiles, signs and broadcasts here; keys live in this browser's
+  <code>localStorage</code>.</label>
+  <label><input type="radio" name="signer" value="humid"> <strong>Humid extension</strong>:
+  this page hands Humid a <code>txmanifest.json</code> and it does the compiling, signing
+  and broadcasting itself, showing you its own confirmation.</label>
+  <div id="humid-box" hidden>
+    <p class="note">Humid reads <code>txmanifest.humid.json</code> from this directory
+    (<code>manifest_version 0.1.0</code>, its own dialect) rather than anything this page
+    builds. It doesn't need a wallet here, since it holds its own funds and its own key, but it does
+    need the relative-timelock patch applied, or every withdrawal is refused with
+    <code>unimplemented-construct</code>. Its <code>FullWithdraw</code> is also still broken
+    in unpatched builds (<em>"pays nothing, so there is nothing to build"</em>), so expect the last
+    withdrawal to fail on this path.</p>
+    <p class="note"><strong>On Humid's “Connect this dapp?” screen, tick
+    <code>processConfidentialTransaction</code>.</strong> That checklist starts with nothing
+    selected, and there is a second grant check per method: without it every single action
+    raises its own “Perform a contract action?” prompt, no matter how the session is handled.
+    Connecting itself only re-prompts when the session is actually gone, which, given the
+    extension's worker lifecycle and auto-lock, is often.</p>
+    <button id="btn-humid-detect" class="secondary">Check for Humid</button>
+    <button id="btn-humid-key" class="secondary">Get my key from Humid</button>
+    <div class="out" id="out-humid"></div>
+  </div>
+</section>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="benefactor">I'm the benefactor (setting up an allowance)</button>
+  <button class="tab-btn" data-tab="beneficiary">I'm the beneficiary (claiming an allowance)</button>
+  <button class="tab-btn" data-tab="about">How this works</button>
+</div>
+
+<p class="note" style="margin: -8px 0 16px;">These tabs are two views of the same demo, not
+two identities: switching them changes what you are looking at, never what you can do. What
+you can actually do depends on what is in this browser, which is what “can fund” and “can
+withdraw” above report. One browser profile can hold both sides; two profiles is how you get
+two genuinely separate parties.</p>
+
+<!-- ========================= BENEFACTOR ========================= -->
+<div id="tab-benefactor" class="tab-panel">
+
+<section>
+  <h2>Your wallet</h2>
+  <p class="note">A single-key LWK wallet from a BIP-39 mnemonic kept in this browser's
+  <code>localStorage</code>, in plaintext. Testnet play money only. Never put a real
+  mnemonic here.</p>
+  <p class="warning" id="wallet-humid-note" hidden>Humid is the selected signer, so this
+  wallet is not used: Humid funds from its own balance and pays withdrawals to its own change
+  address. The faucet button below would fund <em>this page's</em> wallet, which Humid never
+  looks at. Fund Humid instead, through its own receive address in the extension. You can
+  skip this whole section.</p>
+  <label for="mnemonic">Mnemonic (leave blank to generate one)</label>
+  <input type="text" id="mnemonic" class="mono" placeholder="twelve words, or leave blank">
+  <button id="btn-wallet">Open wallet</button>
+  <button id="btn-sync" class="secondary">Sync &amp; show balance</button>
+  <button id="btn-faucet" class="secondary">Request testnet funds</button>
+  <span class="hint-inline">The faucet doesn't send any CORS headers, so this page can
+  dispatch the request but cannot read the reply, and checks your balance a minute later
+  instead.</span>
+  <div class="out" id="out-wallet"></div>
+</section>
+
+<section>
+  <h2>Choose the allowance terms</h2>
+  <p class="note">These three values are compiled <em>into</em> the contract, so they also
+  determine its address. They cannot be changed afterwards: a different value is a different,
+  unrelated allowance at a different address.</p>
+  <label for="benkey">Beneficiary's public key (they send you this)</label>
+  <input type="text" id="benkey" class="mono" placeholder="64 hex characters (BIP340 x-only pubkey)">
+  <span class="hint-inline" id="hint-benkey"></span>
+  <div class="row">
+    <div>
+      <label for="allowance">Withdrawable per period (sats)</label>
+      <input type="number" id="allowance" value="5000" min="1">
+      <span class="hint-inline" id="hint-allowance"></span>
+    </div>
+    <div>
+      <label for="mindist">Blocks between withdrawals</label>
+      <input type="number" id="mindist" value="3" min="1" max="65535">
+      <span class="hint-inline" id="hint-mindist"></span>
+    </div>
+  </div>
+  <button id="btn-compile">Compile &amp; derive address</button>
+  <button id="btn-usemine" class="secondary">Use my own key (single-wallet test)</button>
+  <div class="out" id="out-compile"></div>
+</section>
+
+<section>
+  <h2>Fund it</h2>
+  <p class="note">Pays an <strong>explicit</strong> (unblinded) output to the covenant address.
+  That is not a stylistic choice: the contract reads its own amount, so a confidential output
+  here can never be spent and the funds are lost permanently. Leave broadcast unchecked the
+  first time to see what would be built.</p>
+  <label for="fundamt">Amount to lock (sats)</label>
+  <input type="number" id="fundamt" value="8000" min="1">
+  <span class="hint-inline" id="hint-fundamt"></span>
+  <label><input type="checkbox" id="fund-broadcast"> Broadcast for real</label>
+  <button id="btn-fund">Fund</button>
+  <div class="out" id="out-fund"></div>
+</section>
+
+<section>
+  <h2>Hand the terms to the beneficiary</h2>
+  <p class="note">Nothing here is secret, and there is no protocol for it, so send it however
+  you like. The beneficiary's page re-derives the address from the three parameters and
+  refuses to go on if it disagrees with the address below, so garbled or altered terms are
+  caught before anyone funds the wrong covenant.</p>
+  <textarea id="terms" rows="5" placeholder="compile the contract and this fills in"></textarea>
+  <button id="btn-terms-copy" class="secondary">Copy</button>
+  <div class="out" id="out-terms"></div>
+</section>
+
+</div>
+
+<!-- ========================= BENEFICIARY ========================= -->
+<div id="tab-beneficiary" class="tab-panel" hidden>
+
+<section>
+  <h2>Your key</h2>
+  <p class="note">The contract's <code>BENEFICIARY_KEY</code> is a BIP340 x-only public key,
+  and the only way to withdraw is a signature by its private half. Strictly this needs a
+  <em>signer</em>, not a wallet, but in practice a signer almost always comes in the form of
+  a wallet, and treating the two as interchangeable is reasonable outside a demo. This page
+  takes the shortcut: a bare Schnorr keypair, no derivation, no descriptor.</p>
+  <p class="warning"><strong>This key is not covered by your wallet's mnemonic.</strong> It is
+  32 random bytes in this browser's <code>localStorage</code> and nothing else. Writing down
+  the twelve words does <em>not</em> back it up: clear this site's data and any allowance
+  made out to this key becomes permanently unclaimable, even though the wallet itself would
+  survive. Copy the secret below somewhere safe if an allowance is funded to it, or treat the
+  whole thing as disposable testnet play.</p>
+  <button id="btn-key">Generate / show my key</button>
+  <button id="btn-key-secret" class="secondary">Reveal secret key (for backup)</button>
+  <div class="out" id="out-key"></div>
+</section>
+
+<section>
+  <h2>Load the allowance</h2>
+  <p class="note">Paste what the benefactor sent you. You need no funds and no file they
+  created: the address is derived from the terms, and the current UTXO is found by looking at
+  the chain. What you do need is a <em>signer</em> for the key above; this page uses a bare
+  keypair, but in any real deployment that signer would be a wallet, since that is where keys
+  live.</p>
+  <textarea id="terms-in" rows="5" placeholder='{"v":1,"BENEFICIARY_KEY":"...","ALLOWANCE_AMOUNT":"5000","MIN_DISTANCE":3,"address":"tex1p..."}'></textarea>
+  <button id="btn-terms-load">Load</button>
+  <div class="out" id="out-terms-in"></div>
+  <p class="warning" id="warn-key" hidden></p>
+  <details>
+    <summary>Or type the terms in by hand</summary>
+    <p class="note">Same three values, if the blob is inconvenient to move. Fill these in and
+    press Load; the fields are shared with the benefactor tab.</p>
+    <label for="benkey-manual">Beneficiary public key (yours)</label>
+    <input type="text" id="benkey-manual" class="mono" placeholder="64 hex">
+    <div class="row">
+      <div>
+        <label for="allowance-manual">Withdrawable per period (sats)</label>
+        <input type="number" id="allowance-manual" min="1">
+      </div>
+      <div>
+        <label for="mindist-manual">Blocks between withdrawals</label>
+        <input type="number" id="mindist-manual" min="1" max="65535">
+      </div>
+    </div>
+    <button id="btn-manual-load" class="secondary">Load these</button>
+  </details>
+</section>
+
+<section>
+  <h2>Withdraw</h2>
+  <p class="note">Every UTXO at the covenant address is an independent allowance with its own
+  timelock. They are never summed and can never be merged. Each is labelled with the action
+  its current balance makes valid: <code>PartialWithdraw</code> while there is more than one
+  period left, <code>FullWithdraw</code> for the last one, which closes it.</p>
+  <label for="payout">Pay withdrawals to (blank = this browser's own wallet)</label>
+  <input type="text" id="payout" class="mono" placeholder="tex1... or tlq1...">
+  <label><input type="checkbox" id="wd-dryrun"> Dry run: build and sign, but do not
+  broadcast</label>
+  <span class="hint-inline">Worth doing once per allowance: it exercises the whole path
+  (compile, sighash, signature, and the contract's own execution) without spending anything. A
+  failure here is the contract or the manifest refusing, not the network.</span>
+  <button id="btn-status">Refresh status</button>
+  <button id="btn-payout-mine" class="secondary">Use my wallet address</button>
+  <button id="btn-copy-address" class="secondary">Copy covenant address</button>
+  <div class="out" id="out-status"></div>
+  <div class="tablewrap"><table id="instances" hidden>
+    <thead><tr><th>Instance</th><th>Balance</th><th>Timelock</th><th>Action</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+  <div class="out" id="out-claim"></div>
+</section>
+
+</div>
+
+<!-- ========================= ABOUT ========================= -->
+<div id="tab-about" class="tab-panel about" hidden>
+
+<section>
+  <h2>How this works</h2>
+
+  <h3>What the contract actually enforces</h3>
+  <p>Three values are fixed at compile time and baked into the address:
+  <code>BENEFICIARY_KEY</code>, <code>ALLOWANCE_AMOUNT</code> and <code>MIN_DISTANCE</code>.
+  Every spend needs a BIP340 signature by the beneficiary's key, a BIP68 relative timelock of
+  at least <code>MIN_DISTANCE</code> blocks since the UTXO was created, transaction version 2
+  or later, and <strong>exactly one input</strong>.</p>
+  <p>Which of the two spend shapes is legal is decided by the covenant's own balance, not by
+  the spender. Above <code>ALLOWANCE_AMOUNT</code>, at most that much may leave: the remainder
+  must go back to the very same covenant on output 0, whose script hash the contract compares
+  against its own, with the fee at output 2 and exactly three outputs. At or below
+  <code>ALLOWANCE_AMOUNT</code> the contract doesn't check anything about the outputs at all: the
+  beneficiary may simply take everything, and the covenant ends.</p>
+
+  <h3>Why the fee comes out of the allowance</h3>
+  <p>Only one input is permitted, so nothing outside the covenant can help pay the fee. It
+  comes out of the amount being withdrawn, which also means an allowance funded with less than
+  a fee can never be emptied.</p>
+
+  <h3>Why funding must be unblinded</h3>
+  <p>Liquid blinds asset and amount by default, and that is the better default in general. But
+  this contract reads its own balance and output 0's amount, which is only possible against
+  explicit values, and fails outright otherwise. So the covenant's own outputs must be
+  explicit. Output 1, the payout, is never inspected by the contract and could be blinded;
+  this page keeps it explicit only to avoid a blinding pass. The asymmetry worth remembering:
+  getting this wrong on a covenant output strands the funds silently and forever, while
+  getting it wrong elsewhere merely raises an error.</p>
+
+  <h3>Why this page has to index the chain itself</h3>
+  <p>Neither LWK nor any Simplicity wallet offers "list the UTXOs at this address and tell me
+  which are spendable." That lookup is the application's job, so this page does it directly
+  against Esplora: list the UTXOs, read the chain tip, and compare each UTXO's balance against
+  <code>ALLOWANCE_AMOUNT</code> and its confirmation depth against <code>MIN_DISTANCE</code>.
+  Any real application of a covenant like this needs the same thing.</p>
+
+  <h3>Why refreshing is slow on purpose</h3>
+  <p>The Esplora instance here is a shared public service nobody in this project operates, and
+  it rate-limits hard, refusing everything for minutes after a burst. So automatic refreshing
+  is paced against how long there is actually left to wait, pauses when the tab is hidden,
+  backs off when a response is slow or refused, and stops altogether after an hour. Press
+  Refresh whenever you want an answer sooner.</p>
+
+  <h3>Keys and custody</h3>
+  <p>Both the wallet mnemonic and the beneficiary's secret key sit in this browser's
+  <code>localStorage</code> in plaintext, and a separate browser profile is how you get a
+  genuinely separate party. That is fine for testnet play money and completely unacceptable
+  for anything else.</p>
+</section>
+
+</div>
+
+<section>
+  <h2>Raw output</h2>
+  <p class="note">Everything the page did, newest last. Copy this if you need to report a problem or retrace a step.</p>
+  <button id="btn-clearlog" class="secondary">Clear</button>
+  <div class="out mono" id="log"></div>
+</section>
+
+</main>
+
+<div id="confirm-modal" hidden>
+  <div id="confirm-panel" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <h2 id="confirm-title">Confirm this withdrawal</h2>
+    <p class="note">Check the numbers before signing. This spends a real testnet UTXO and
+    cannot be undone.</p>
+    <div id="confirm-body" class="mono"></div>
+    <button id="confirm-ok">Sign &amp; broadcast</button>
+    <button id="confirm-cancel" class="secondary">Cancel</button>
+  </div>
+</div>
+
+<script type="module">
+// ---------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------
+
+// blockstream.info is used deliberately: it is the only Liquid Esplora mirror that
+// sends CORS headers, so liquid.network cannot be fetched from a browser page even
+// though it is the better choice for server-side use.
+const ESPLORA = "https://blockstream.info/liquidtestnet/api";
+const EXPLORER_TX = "https://blockstream.info/liquidtestnet/tx/";
+const EXPLORER_ADDR = "https://blockstream.info/liquidtestnet/address/";
+const FAUCET = "https://liquidtestnet.com/api/faucet";
+
+// BIP341's unspendable internal key (point with no known discrete log), so the only
+// way to spend is the Simplicity script path. Same constant simplicity-lending uses.
+const NUMS_INTERNAL_KEY = "50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0";
+
+// Fee for the hand-built withdrawal transactions, in satoshis. Taken from the
+// allowance's own balance: the contract permits exactly one input, so no outside
+// input can contribute. Liquid testnet fees are tiny; this is deliberately generous.
+const WITHDRAW_FEE_SATS = 500n;
+
+const LS = {
+  mnemonic: "allowance-lwk.mnemonic",
+  benSecret: "allowance-lwk.beneficiary-secret",
+  params: "allowance-lwk.params",
+  payout: "allowance-lwk.payout",
+};
+
+// ---------------------------------------------------------------------------
+// Tiny helpers
+// ---------------------------------------------------------------------------
+
+const $ = (id) => document.getElementById(id);
+const show = (id, text, cls) => {
+  const el = $(id);
+  el.textContent = text;
+  el.className = "out" + (cls ? " " + cls : "");
+};
+const log = (...parts) => {
+  const line = parts.map((p) => (typeof p === "string" ? p : JSON.stringify(p))).join(" ");
+  $("log").textContent += (new Date().toISOString().slice(11, 19)) + "  " + line + "\n";
+};
+// Known failures paired with the thing to do about them. The underlying libraries say
+// what went wrong and never what to do next, and most of these are setup problems rather
+// than anything about this contract.
+const NEXT_STEPS = [
+  [/unlock the wallet/i,
+   "Humid is locked. Open it: the puzzle-piece Extensions button at the top right of the " +
+   "browser, then Humid. Enter your password and try again. It re-locks itself after a " +
+   "while, so expect this occasionally."],
+  [/window\.humid is not present|window\.humid is missing/i,
+   "Check the extension is enabled at chrome://extensions, that this page is on http:// " +
+   "rather than file://, and that you are in the profile Humid is installed in."],
+  [/unimplemented-construct|relative timelock/i,
+   "The un-patched relative-timelock bug: apply " +
+   "examples/allowance-humid/humid-allowance-fixes.patch, rebuild with bun run build, and " +
+   "reload the extension."],
+  [/pays nothing/i,
+   "The un-patched FullWithdraw bug; the same patch fixes it. Rebuild and reload."],
+  [/null pointer passed to rust/i,
+   "A wasm handle was used after a method consumed it. Builder methods move the builder, " +
+   "and getSighashAll/run/finalizeTransaction consume the TxOut array, so build a fresh one " +
+   "for each call and reassign after every builder step."],
+  [/blinded address but got a non-blinded/i,
+   "Address.parse() demands a confidential address. Covenant work needs unconfidential " +
+   "ones, so use new Address(s) and check the network with isMainnet()."],
+  [/missing:|features simplicity/i,
+   "The wasm build has no Simplicity support. Rebuild with: wasm-pack build --release " +
+   "--target web -- --features simplicity, then copy lwk_wasm.js and lwk_wasm_bg.wasm " +
+   "into vendor/."],
+  [/insufficient funds|shortfall|nothing funding it/i,
+   "The spending wallet is short of testnet L-BTC. Top it up from the faucet and sync."],
+  [/non-BIP68-final/i,
+   "The network agrees with the contract that not enough blocks have passed. This is the " +
+   "timelock working: wait and retry."],
+];
+
+const errText = (e) => {
+  // wasm-bindgen errors are often objects whose useful text is in .message or
+  // toString(); Humid's own "[object Object]" bug came from not doing this.
+  if (e == null) return "(null error)";
+  if (typeof e === "string") return e;
+  // A Humid refusal throws rather than returning a field, carrying reject/reason in
+  // the error data: that pair is the actual diagnosis, so show it.
+  const d = (e.data && typeof e.data === "object") ? e.data : e;
+  const reject = d.reject, reason = d.reason;
+  const base = e.message || (() => { try { return JSON.stringify(e); } catch { return String(e); } })();
+  const full = base +
+    (reject ? "\n  reject: " + reject : "") +
+    (reason ? "\n  reason: " + reason : "");
+  const hit = NEXT_STEPS.find(([re]) => re.test(full));
+  return hit ? full + "\n\n→ " + hit[1] : full;
+};
+const hex = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+const randomBytes = (n) => crypto.getRandomValues(new Uint8Array(n));
+
+// Throttle state. blockstream.info answers 429 above a few requests per second and
+// then refuses everything for minutes, so a burst is expensive. Pace on latency too,
+// not only on status codes: a mirror under load can answer slowly rather than refuse.
+let throttledUntil = 0;
+// Measured against this mirror: once it starts refusing, it refuses for minutes rather
+// than seconds, so a 90s stand-down just walks back into the cooldown.
+const THROTTLE_STANDDOWN_MS = 300000;
+
+function noteThrottle(reason) {
+  throttledUntil = Date.now() + THROTTLE_STANDDOWN_MS;
+  log("throttle signal (" + reason + "), standing down for "
+      + Math.round(THROTTLE_STANDDOWN_MS / 60000) + " min");
+}
+
+async function esplora(path, opts) {
+  const started = Date.now();
+  const res = await fetch(ESPLORA + path, opts);
+  const body = await res.text();
+  const elapsed = Date.now() - started;
+
+  if (res.status === 429) {
+    noteThrottle("HTTP 429");
+    throw new Error(
+      "Esplora is rate-limiting us (HTTP 429). It refuses everything for a few minutes " +
+      "after a burst, so wait rather than retrying; automatic refreshing has backed off."
+    );
+  }
+  if (!res.ok) throw new Error(`Esplora ${path} → HTTP ${res.status}: ${body.slice(0, 300)}`);
+  if (elapsed > 5000) noteThrottle(elapsed + "ms response");
+  return body;
+}
+
+// ---------------------------------------------------------------------------
+// Module state
+// ---------------------------------------------------------------------------
+
+let L = null;          // the lwk_wasm module namespace
+let network = null;    // Network
+let policyAsset = null;// AssetId
+let signer = null;     // Signer
+let wollet = null;     // Wollet
+let client = null;     // EsploraClient
+let benKeypair = null; // Keypair  (the beneficiary's BIP340 key)
+let contract = null;   // { source, program, address, params }
+
+// ---------------------------------------------------------------------------
+// 1. Load the library
+// ---------------------------------------------------------------------------
+
+async function loadLibrary() {
+  show("out-load", "Loading…");
+  try {
+    const mod = await import("./vendor/lwk_wasm.js");
+    await mod.default();     // --target web: default export is the wasm init
+    L = mod;
+
+    const missing = [
+      "SimplicityProgram", "SimplicityArguments", "SimplicityTypedValue",
+      "SimplicityWitnessValues", "SimplicityLogLevel", "Keypair",
+      "PsetBuilder", "PsetInputBuilder", "PsetOutputBuilder", "TxSequence",
+    ].filter((n) => !(n in mod));
+
+    if (missing.length) {
+      throw new Error(
+        "This build is missing: " + missing.join(", ") +
+        ". The Simplicity API is behind a cargo feature. Rebuild with:\n" +
+        "  wasm-pack build --release --target web -- --features simplicity"
+      );
+    }
+
+    network = L.Network.testnet();
+    policyAsset = network.policyAsset();
+    client = new L.EsploraClient(network, ESPLORA, false, 1, false);
+    show("out-load",
+      "Loaded.\nnetwork: " + network.toString() +
+      "\npolicy asset: " + policyAsset.toString() +
+      "\nSimplicity API: present", "");
+    log("library loaded, network", network.toString());
+    restoreParams();
+
+    // Everything below is recoverable from localStorage, so a reload should land you
+    // back where you were rather than at an empty form.
+    try { loadBeneficiaryKey(); } catch (e) { log("key restore skipped:", errText(e)); }
+    const savedPayout = localStorage.getItem(LS.payout);
+    if (savedPayout && !$("payout").value.trim()) $("payout").value = savedPayout;
+
+    if ($("benkey").value.trim()) {
+      try {
+        contract = await buildContract(readParams());
+        log("recompiled saved contract:", contract.address.toString());
+        show("out-compile", "Recompiled from saved parameters.\ncovenant address: " +
+          contract.address.toString(), "");
+        await refreshStatus();
+      } catch (e) {
+        log("could not recompile saved params:", errText(e));
+      }
+    }
+  } catch (e) {
+    show("out-load",
+      "Failed: " + errText(e) +
+      "\n\nThe usual cause is that vendor/ is missing or incomplete. It needs exactly " +
+      "two files, copied from an lwk_wasm build made with --features simplicity:\n" +
+      "  vendor/lwk_wasm.js\n  vendor/lwk_wasm_bg.wasm\n" +
+      "Fix that and reload the page.", "err");
+    log("load failed:", errText(e));
+  } finally {
+    // loadLibrary() is called directly at startup, not through a button, so it does
+    // not get the single-flight wrapper's updateUi() on the way out. Without this the
+    // facts panel keeps reporting "library: not loaded" forever.
+    updateUi();
+  }
+}
+
+const needLib = () => {
+  if (!L) throw new Error("The library has not finished loading. It loads automatically when the page opens. If it failed, fix vendor/ and press Retry.");
+};
+
+// ---------------------------------------------------------------------------
+// 2. Wallet
+// ---------------------------------------------------------------------------
+
+$("btn-wallet").onclick = async () => {
+  show("out-wallet", "Opening…");
+  try {
+    needLib();
+    let phrase = $("mnemonic").value.trim() || localStorage.getItem(LS.mnemonic) || "";
+    let mnemonic;
+    if (phrase) {
+      mnemonic = new L.Mnemonic(phrase);
+    } else {
+      mnemonic = L.Mnemonic.fromRandom(12);
+      log("generated a new mnemonic");
+    }
+    phrase = mnemonic.toString();
+    localStorage.setItem(LS.mnemonic, phrase);
+    $("mnemonic").value = phrase;
+
+    signer = new L.Signer(mnemonic, network);
+    const descriptor = signer.wpkhSlip77Descriptor();
+    wollet = new L.Wollet(network, descriptor);
+
+    const addr = wollet.address().address();
+    // Flow the wallet's own address into the payout field if nothing is set, so a
+    // single-profile test doesn't need any copying by hand.
+    if (!$("payout").value.trim()) {
+      $("payout").value = addr.toUnconfidential().toString();
+      flash("payout");
+      log("payout address auto-filled from this wallet");
+    }
+    show("out-wallet",
+      "Wallet open.\nreceive address: " + addr.toString() +
+      "\nfingerprint: " + signer.fingerprint() +
+      "\n\nNot synced yet. Press “Sync & show balance”.", "");
+    log("wallet open, address", addr.toString());
+  } catch (e) {
+    show("out-wallet", "Failed: " + errText(e), "err");
+    log("wallet failed:", errText(e));
+  }
+};
+
+$("btn-sync").onclick = async () => {
+  show("out-wallet", "Scanning the chain (this can take a while on first run)…");
+  try {
+    needLib();
+    if (!wollet) throw new Error("Open the wallet first.");
+    const update = await client.fullScan(wollet);
+    if (update) wollet.applyUpdate(update);
+    const addr = wollet.address().address();
+    walletBalanceSats = policyBalanceOf(wollet);
+    show("out-wallet",
+      "receive address: " + addr.toString() +
+      "\nbalance: " + (walletBalanceSats === null
+        ? wollet.balance().toString()
+        : walletBalanceSats + " sats") +
+      "\ntip height: " + wollet.tip().height(), "");
+    log("synced, balance", String(walletBalanceSats));
+  } catch (e) {
+    show("out-wallet", "Sync failed: " + errText(e), "err");
+    log("sync failed:", errText(e));
+  }
+};
+
+$("btn-faucet").onclick = async () => {
+  try {
+    needLib();
+    if (!wollet) throw new Error("Open a wallet on the benefactor tab first.");
+    const addr = wollet.address().address().toString();
+    const before = walletBalanceSats;
+
+    // liquidtestnet.com returns no Access-Control-Allow-Origin header, so an ordinary
+    // fetch() cannot READ its reply. The request itself is fine, a plain GET with no
+    // custom headers doesn't need a preflight, so the browser sends it either way and merely
+    // refuses to hand the response back. mode:"no-cors" asks for exactly that: dispatch
+    // it, accept an opaque response. We lose the txid and any error text, so the only
+    // honest confirmation is the balance changing.
+    //
+    // This is why webapp/server/faucet.py exists in this repo: that path runs
+    // server-side, where no same-origin policy applies, and can read the real reply.
+    show("out-wallet", "Requesting funds for\n" + addr + " …");
+    await fetch(`${FAUCET}?address=${encodeURIComponent(addr)}&action=lbtc`,
+                { mode: "no-cors", cache: "no-store" });
+    log("faucet request dispatched; response is opaque by design");
+
+    show("out-wallet",
+      "Request sent for\n" + addr +
+      "\n\nThe faucet's reply cannot be read from a web page, so this is not a " +
+      "confirmation. Checking your balance in about a minute. If nothing arrives, ask " +
+      "for it by hand at https://liquidtestnet.com/faucet or with your own faucet tool.",
+      "");
+
+    // One check, timed for a block, deliberately not a poll, since a wallet rescan is
+    // much heavier than an Esplora read.
+    setTimeout(async () => {
+      try {
+        const upd = await client.fullScan(wollet);
+        if (upd) wollet.applyUpdate(upd);
+        walletBalanceSats = policyBalanceOf(wollet);
+        const arrived = walletBalanceSats !== null &&
+                        (before === null ? walletBalanceSats > 0n : walletBalanceSats > before);
+        show("out-wallet", arrived
+          ? "Funds arrived. Balance is now " + walletBalanceSats + " sats."
+          : "Balance is " + walletBalanceSats + " sats, unchanged so far. The faucet can be " +
+            "slow or may have refused the request. Try again, or use " +
+            "https://liquidtestnet.com/faucet by hand.", arrived ? "" : "warn");
+        log("post-faucet balance:", String(walletBalanceSats));
+        updateUi();
+      } catch (e) {
+        show("out-wallet", "Could not check the balance: " + errText(e), "warn");
+      }
+    }, 60000);
+  } catch (e) {
+    show("out-wallet", "Could not dispatch the faucet request: " + errText(e) +
+      "\n\nAsk for funds by hand instead: https://liquidtestnet.com/faucet", "warn");
+  }
+};
+
+// ---------------------------------------------------------------------------
+// 3. Beneficiary key
+// ---------------------------------------------------------------------------
+
+function loadBeneficiaryKey() {
+  needLib();
+  if (benKeypair) return benKeypair;
+  let secretHex = localStorage.getItem(LS.benSecret);
+  if (!secretHex) {
+    secretHex = hex(randomBytes(32));
+    localStorage.setItem(LS.benSecret, secretHex);
+    log("generated a new beneficiary secret key");
+  }
+  const bytes = Uint8Array.from(secretHex.match(/../g).map((h) => parseInt(h, 16)));
+  benKeypair = L.Keypair.fromSecretBytes(bytes);
+  // Carry it into the params field if nothing is there yet: a single-wallet test
+  // otherwise makes you press "Use my own key" for a value the page already knows.
+  if (!$("benkey").value.trim()) {
+    $("benkey").value = benKeypair.xOnlyPublicKey.toString();
+  }
+  return benKeypair;
+}
+
+$("btn-key").onclick = () => {
+  try {
+    const kp = loadBeneficiaryKey();
+    const xonly = kp.xOnlyPublicKey.toString();
+    show("out-key",
+      "BENEFICIARY_KEY (x-only, give this to the benefactor):\n" + xonly +
+      "\n\nThe matching secret key stays in this browser's localStorage.", "");
+    log("beneficiary x-only pubkey", xonly);
+  } catch (e) {
+    show("out-key", "Failed: " + errText(e), "err");
+  }
+};
+
+$("btn-key-secret").onclick = () => {
+  try {
+    const kp = loadBeneficiaryKey();
+    show("out-key",
+      "SECRET key. Anyone holding this can withdraw the allowance. Do not paste it " +
+      "anywhere but a password manager, and never into the benefactor's copy of this page:\n" +
+      hex(kp.secretBytes) +
+      "\n\npublic (x-only), which is what the benefactor needs:\n" +
+      kp.xOnlyPublicKey.toString() +
+      "\n\nTo restore it in another browser, set localStorage key\n  " + LS.benSecret +
+      "\nto the secret above, then reload.", "warn");
+    log("beneficiary secret revealed on screen");
+  } catch (e) {
+    show("out-key", "Failed: " + errText(e), "err");
+  }
+};
+
+$("btn-usemine").onclick = () => {
+  try {
+    $("benkey").value = loadBeneficiaryKey().xOnlyPublicKey.toString();
+    show("out-compile", "Filled in your own key: you are both parties, which is fine for a single-wallet test.", "");
+  } catch (e) {
+    show("out-compile", "Failed: " + errText(e), "err");
+  }
+};
+
+// ---------------------------------------------------------------------------
+// 4. Compile and derive the address
+// ---------------------------------------------------------------------------
+
+function readParams() {
+  const benkey = $("benkey").value.trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(benkey)) {
+    throw new Error("BENEFICIARY_KEY must be exactly 64 hex characters (an x-only pubkey).");
+  }
+  const allowance = BigInt($("allowance").value);
+  const mindist = Number($("mindist").value);
+  if (allowance <= 0n) throw new Error("ALLOWANCE_AMOUNT must be positive.");
+  if (!Number.isInteger(mindist) || mindist < 1 || mindist > 65535) {
+    throw new Error("MIN_DISTANCE must be an integer in 1..65535 (the contract's Distance is 16-bit).");
+  }
+  return { benkey, allowance, mindist };
+}
+
+// Rebuilds the compiled program. The contract's three compile-time params become
+// SimplicityArguments; their types match allowance.simf's declarations:
+// BENEFICIARY_KEY is a Pubkey (u256), ALLOWANCE_AMOUNT a u64, MIN_DISTANCE a u16.
+async function buildContract(params) {
+  const source = await (await fetch("./allowance.simf")).text();
+
+  const args = new L.SimplicityArguments()
+    .addValue("BENEFICIARY_KEY", L.SimplicityTypedValue.fromU256Hex(params.benkey))
+    .addValue("ALLOWANCE_AMOUNT", L.SimplicityTypedValue.fromU64(params.allowance))
+    .addValue("MIN_DISTANCE", L.SimplicityTypedValue.fromU16(params.mindist));
+
+  const program = L.SimplicityProgram.load(source, args);
+  const internalKey = L.XOnlyPublicKey.fromString(NUMS_INTERNAL_KEY);
+  const address = program.createP2trAddress(internalKey, network);
+
+  return { source, program, address, internalKey, params };
+}
+
+$("btn-compile").onclick = async () => {
+  show("out-compile", "Compiling…");
+  try {
+    needLib();
+    const params = readParams();
+    contract = await buildContract(params);
+    saveParams(params);
+    fillTermsBlob();
+    const hours = (params.mindist / 60).toFixed(1);
+    show("out-compile",
+      "Compiled.\nCMR: " + contract.program.cmr.toString() +
+      "\ncovenant address: " + contract.address.toString() +
+      "\nexplorer: " + EXPLORER_ADDR + contract.address.toString() +
+      "\n\nMIN_DISTANCE " + params.mindist + " blocks is about " +
+      (params.mindist < 90 ? params.mindist + " minutes" : hours + " hours") +
+      " between withdrawals." +
+      (params.mindist > 60
+        ? " That is a realistic figure but a slow demo. Try 3 if you just want to see " +
+          "the lifecycle work."
+        : "") +
+      "\n\nThis address depends on all three params: change any of them and it is a " +
+      "different, unrelated allowance.", "");
+    log("compiled, address", contract.address.toString());
+  } catch (e) {
+    show("out-compile", "Failed: " + errText(e), "err");
+    log("compile failed:", errText(e));
+  }
+};
+
+// Keep the handoff blob in step with the compiled contract, so it is ready to send
+// the moment the address exists rather than after pressing another button.
+function fillTermsBlob() {
+  if (!contract) return;
+  $("terms").value = JSON.stringify({
+    v: 1,
+    network: "liquidtestnet",
+    BENEFICIARY_KEY: contract.params.benkey,
+    ALLOWANCE_AMOUNT: contract.params.allowance.toString(),
+    MIN_DISTANCE: contract.params.mindist,
+    address: contract.address.toString(),
+  });
+  flash("terms");
+}
+
+// The benefactor's terms are entirely public: three compile-time params plus the
+// address they produce. The address travels only so the receiver can check its own
+// derivation against it, and it is never trusted as the address to pay.
+$("btn-terms-copy").onclick = async () => {
+  try {
+    const c = needContract();
+    const blob = JSON.stringify({
+      v: 1,
+      network: "liquidtestnet",
+      BENEFICIARY_KEY: c.params.benkey,
+      ALLOWANCE_AMOUNT: c.params.allowance.toString(),
+      MIN_DISTANCE: c.params.mindist,
+      address: c.address.toString(),
+    });
+    $("terms").value = blob;
+    flash("terms");
+    let copied = false;
+    try { await navigator.clipboard.writeText(blob); copied = true; } catch { /* no permission */ }
+    show("out-terms", copied
+      ? "Copied to the clipboard. Send it to the beneficiary however you like."
+      : "Shown above. Select and copy it by hand (the clipboard needs permission).", "");
+    log("terms exported");
+  } catch (e) {
+    show("out-terms", "Failed: " + errText(e), "err");
+  }
+};
+
+$("btn-terms-load").onclick = async () => {
+  show("out-terms-in", "Loading…");
+  try {
+    needLib();
+    const raw = $("terms-in").value.trim();
+    if (!raw) throw new Error("Paste the terms the benefactor gave you into the field first.");
+    let blob;
+    try { blob = JSON.parse(raw); } catch { throw new Error("That is not valid JSON."); }
+    if (blob.network && blob.network !== "liquidtestnet") {
+      throw new Error("These terms are for " + blob.network + ", but this page is testnet-only.");
+    }
+    for (const f of ["BENEFICIARY_KEY", "ALLOWANCE_AMOUNT", "MIN_DISTANCE"]) {
+      if (blob[f] === undefined) throw new Error("Terms are missing " + f + ".");
+    }
+    // Visibly flow the three values into the shared parameter fields rather than
+    // consuming them invisibly: the benefactor tab shows exactly what was loaded.
+    $("benkey").value = String(blob.BENEFICIARY_KEY).trim().toLowerCase();
+    $("allowance").value = String(blob.ALLOWANCE_AMOUNT);
+    $("mindist").value = String(blob.MIN_DISTANCE);
+    flash("benkey"); flash("allowance"); flash("mindist");
+    updateHints();
+
+    const params = readParams();
+    contract = await buildContract(params);
+    localStorage.setItem(LS.params, JSON.stringify({
+      benkey: params.benkey,
+      allowance: params.allowance.toString(),
+      mindist: params.mindist,
+    }));
+
+    const derived = contract.address.toString();
+    const claimed = blob.address ? String(blob.address).trim() : null;
+
+    if (claimed && claimed !== derived) {
+      // Either the terms were altered in transit or the contract source differs.
+      // Refuse to go on: paying the stated address would fund a covenant whose
+      // terms are not the ones written down here.
+      contract = null;
+      throw new Error(
+        "Address mismatch. Do not use these terms.\n" +
+        "  terms say: " + claimed + "\n" +
+        "  these params actually produce: " + derived + "\n" +
+        "The terms were altered in transit, or the sender compiled a different contract."
+      );
+    }
+
+    const kp = loadBeneficiaryKey();
+    const mine = kp.xOnlyPublicKey.toString() === params.benkey;
+    show("out-terms-in",
+      "Loaded, and the address re-derived here" +
+      (claimed ? " (it matches the one in the blob)." : " (the blob named no address to check).") +
+      "\ncovenant address: " + derived +
+      "\nterms: " + params.allowance + " sats every " + params.mindist + " blocks (~" +
+      params.mindist + " min)", "");
+    log("terms loaded, address", derived, mine ? "(claimable here)" : "(watch only)");
+    await refreshStatus();
+  } catch (e) {
+    show("out-terms-in", "Failed: " + errText(e), "err");
+    log("terms load failed:", errText(e));
+  }
+};
+
+// Typing the terms by hand, for when moving the blob is awkward. Writes into the
+// same shared fields, so the result is identical to loading a blob.
+$("btn-manual-load").onclick = async () => {
+  show("out-terms-in", "Loading…");
+  try {
+    needLib();
+    const k = $("benkey-manual").value.trim().toLowerCase();
+    const a = $("allowance-manual").value.trim();
+    const d = $("mindist-manual").value.trim();
+    if (!k || !a || !d) throw new Error("Fill in all three values first.");
+    $("benkey").value = k;
+    $("allowance").value = a;
+    $("mindist").value = d;
+    flash("benkey"); flash("allowance"); flash("mindist");
+    updateHints();
+    contract = await buildContract(readParams());
+    saveParams(contract.params);
+    show("out-terms-in", "Loaded from the typed values.\ncovenant address: " +
+      contract.address.toString(), "");
+    log("manual terms loaded:", contract.address.toString());
+    await refreshStatus();
+  } catch (e) {
+    show("out-terms-in", "Failed: " + errText(e), "err");
+  }
+};
+
+function restoreParams() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS.params) || "null");
+    if (!saved) return;
+    $("benkey").value = saved.benkey || "";
+    if (saved.allowance) $("allowance").value = saved.allowance;
+    if (saved.mindist) $("mindist").value = saved.mindist;
+  } catch { /* ignore malformed storage */ }
+}
+
+// Where a withdrawal pays. A beneficiary need not run a wallet here at all: any
+// address works, and it must end up unblinded because this page builds explicit-only
+// transactions with no blinding pass.
+function resolvePayoutAddress() {
+  const typed = $("payout").value.trim();
+  if (typed) {
+    // `new Address(s)` and `Address.parse(s, network)` are NOT interchangeable:
+    // parse() routes through lwk_common::Address::parse, which rejects any
+    // non-blinded address outright ("Expected a blinded address but got a
+    // non-blinded one"). Unconfidential addresses are exactly what this page needs,
+    // so use the plain constructor and check the network separately.
+    const addr = new L.Address(typed);
+    if (addr.isMainnet()) {
+      throw new Error("That is a mainnet address. This demo is testnet-only.");
+    }
+    localStorage.setItem(LS.payout, typed);
+    return addr.isBlinded() ? addr.toUnconfidential() : addr;
+  }
+  if (!wollet) {
+    throw new Error(
+      "No payout address. Paste one above, or open a wallet on the benefactor tab to use its own."
+    );
+  }
+  return wollet.address().address().toUnconfidential();
+}
+
+$("btn-copy-address").onclick = async () => {
+  try {
+    const c = needContract();
+    const addr = c.address.toString();
+    try {
+      await navigator.clipboard.writeText(addr);
+      show("out-claim", "Copied the covenant address:\n" + addr, "");
+    } catch {
+      show("out-claim", "Clipboard refused; here it is to copy by hand:\n" + addr, "");
+    }
+  } catch (e) {
+    show("out-claim", "Failed: " + errText(e), "err");
+  }
+};
+
+$("btn-payout-mine").onclick = () => {
+  try {
+    needLib();
+    if (!wollet) throw new Error("Open a wallet on the benefactor tab first.");
+    $("payout").value = wollet.address().address().toUnconfidential().toString();
+    show("out-claim", "Filled in this browser's own wallet address.", "");
+  } catch (e) {
+    show("out-claim", "Failed: " + errText(e), "err");
+  }
+};
+
+const needContract = () => {
+  if (!contract) throw new Error("No contract yet. Compile one on the benefactor tab, or load the terms on the beneficiary tab.");
+  return contract;
+};
+
+// ---------------------------------------------------------------------------
+// 5. Fund
+// ---------------------------------------------------------------------------
+
+$("btn-fund").onclick = async () => {
+  show("out-fund", "Building…");
+  try {
+    needLib();
+    // Only the in-page path spends from this browser's wallet. Humid funds from its own
+    // balance, and the wallet section says to skip itself in that mode, so requiring one
+    // here contradicted the page's own instructions.
+    if (!usingHumid() && (!wollet || !signer)) {
+      throw new Error("Open a wallet on the benefactor tab first.");
+    }
+    const c = needContract();
+    const amount = BigInt($("fundamt").value);
+    const broadcast = $("fund-broadcast").checked;
+
+    // These two hold whoever signs: a non-positive amount is meaningless, and an
+    // allowance smaller than the withdrawal fee can never be emptied, because
+    // enforce_single_input() leaves nothing else to pay the fee with.
+    if (amount <= 0n) throw new Error("Enter an amount above zero.");
+    if (amount < WITHDRAW_FEE_SATS) {
+      throw new Error(
+        "That is less than the " + WITHDRAW_FEE_SATS + "-sat withdrawal fee, so the " +
+        "allowance could never be withdrawn: the fee has to come out of the covenant's " +
+        "own balance."
+      );
+    }
+
+    if (usingHumid()) {
+      // Humid compiles, funds, signs and broadcasts from the manifest; this page
+      // supplies only the call-time parameters, and Humid shows its own confirmation.
+      show("out-fund", "Handing the Fund action to Humid. Confirm it in the extension…");
+      const result = await humidCall("Fund", {
+        params: {
+          BENEFICIARY_KEY: c.params.benkey,
+          ALLOWANCE_AMOUNT: c.params.allowance.toString(),
+          MIN_DISTANCE: String(c.params.mindist),
+          amount_sat: amount.toString(),
+        },
+        broadcast,
+      });
+      // Response shape is {broadcast, feeSats, transactionHex, txid, deployment?}.
+      // feeSats is a STRING, so never do arithmetic on it without parsing. `deployment`
+      // appears for actions with a create_instance block, i.e. Fund, and carries the
+      // instance fields Humid computed, so there is no need to echo our own form back.
+      const txid = result && result.txid;
+      const deployed = result && result.deployment;
+      show("out-fund",
+        (result && result.broadcast
+          ? "Humid broadcast the funding transaction."
+          : "Dry run: Humid built it and sent nothing.") +
+        (txid ? "\ntxid: " + txid + (result && result.broadcast ? "\n" + EXPLORER_TX + txid : "") : "") +
+        (result && result.feeSats ? "\nfee: " + result.feeSats + " sats" : "") +
+        (result && result.transactionHex
+          ? "\nbuilt transaction: " + result.transactionHex.length / 2 + " bytes" : "") +
+        (deployed
+          ? "\n\nthe instance Humid recorded for this allowance:\n" +
+            Object.entries(deployed).map(([k, v]) => "  " + k + " = " + v).join("\n")
+          : "") +
+        "\n\nfull response:\n" + JSON.stringify(result, null, 2), "");
+      log("humid Fund:", txid || "no txid in response");
+      if (broadcast) await refreshStatus();
+      return;
+    }
+
+    // Catch the common case before building: the error LWK gives for insufficient
+    // funds is much less obvious than this.
+    if (walletBalanceSats !== null && amount > walletBalanceSats) {
+      throw new Error(
+        "Not enough funds: this wallet holds " + walletBalanceSats + " sats and you asked " +
+        "to lock " + amount + ". Use the faucet, then press “Sync & show balance”."
+      );
+    }
+    if (walletBalanceSats === null) {
+      log("funding without a synced balance; press Sync first if this fails");
+    }
+
+    // addExplicitRecipient, NOT addLbtcRecipient: the covenant output must be
+    // unblinded or the funds are stranded forever.
+    const pset = new L.TxBuilder(network)
+      .addExplicitRecipient(c.address, amount, policyAsset)
+      .finish(wollet);
+
+    const signed = signer.sign(pset);
+    const finalPset = wollet.finalize(signed);
+    const tx = finalPset.extractTx();
+
+    if (!broadcast) {
+      show("out-fund",
+        "Dry run, nothing broadcast.\n" +
+        "txid (if sent): " + tx.txid().toString() +
+        "\noutputs: " + tx.outputs.length +
+        "\nfee: " + tx.fee(policyAsset) + " sats" +
+        "\n\nTick “Broadcast for real” to send it.", "");
+      log("fund dry run ok, txid", tx.txid().toString());
+      return;
+    }
+
+    const txid = await client.broadcast(finalPset);
+    show("out-fund", "Broadcast: " + txid.toString() +
+      "\n" + EXPLORER_TX + txid.toString() +
+      "\n\nIt will appear below as a new allowance instance once it confirms. The page " +
+      "is now checking for it periodically, so you do not need to refresh by hand.", "");
+    log("funded, txid", txid.toString());
+    walletBalanceSats = null;          // stale now
+    await refreshStatus();             // starts the pending-aware poll
+  } catch (e) {
+    show("out-fund", "Failed: " + errText(e), "err");
+    log("fund failed:", errText(e));
+  }
+};
+
+// ---------------------------------------------------------------------------
+// 6. The indexer
+// ---------------------------------------------------------------------------
+
+// Liquid produces a block about once a minute, so re-fetching the tip on every refresh
+// doubled the request count for a number that had almost certainly not moved.
+let tipCache = { height: 0, at: 0 };
+const TIP_CACHE_MS = 30000;
+
+async function cachedTipHeight() {
+  if (tipCache.height && Date.now() - tipCache.at < TIP_CACHE_MS) return tipCache.height;
+  const height = parseInt(await esplora("/blocks/tip/height"), 10);
+  tipCache = { height, at: Date.now() };
+  return height;
+}
+
+async function loadInstances() {
+  const c = needContract();
+  const addr = c.address.toString();
+  const [utxoJson, tip] = await Promise.all([
+    esplora(`/address/${addr}/utxo`),
+    cachedTipHeight(),
+  ]);
+  const utxos = JSON.parse(utxoJson);
+
+  return utxos.map((u) => {
+    // A confidential output at this address carries `valuecommitment` and no `value`.
+    // Nobody can spend it, but it must not take the whole listing down either: without
+    // this guard BigInt(undefined) throws and hides every legitimate instance here too.
+    const blinded = u.value === undefined || u.value === null;
+    const value = blinded ? 0n : BigInt(u.value);
+    const confirmed = !!(u.status && u.status.confirmed);
+    // Depth counts the funding block itself, matching BIP68's "distance".
+    const depth = confirmed ? tip - u.status.block_height + 1 : 0;
+    return {
+      txid: u.txid,
+      vout: u.vout,
+      value,
+      blinded,
+      confirmed,
+      depth,
+      ready: !blinded && confirmed && depth >= c.params.mindist,
+      action: blinded ? "none" : value <= c.params.allowance ? "FullWithdraw" : "PartialWithdraw",
+    };
+  }).sort((a, b) => Number(b.value - a.value));
+}
+
+// The auto-poll is paced; a person clicking this while waiting out a timelock is not.
+let lastManualRefresh = 0;
+const MANUAL_REFRESH_MIN_MS = 5000;
+
+$("btn-status").onclick = () => {
+  const since = Date.now() - lastManualRefresh;
+  if (since < MANUAL_REFRESH_MIN_MS) {
+    show("out-status", "Just checked. The chain moves about once a minute, so give it "
+      + Math.ceil((MANUAL_REFRESH_MIN_MS - since) / 1000) + "s.", "");
+    return;
+  }
+  lastManualRefresh = Date.now();
+  refreshStatus();
+};
+
+let refreshing = false;   // guards a manual click racing another refresh (LOG Step 32)
+let lastInstances = [];   // so cancelling a claim can re-render without refetching
+
+// A claim is "busy" from the click until it resolves, the confirmation dialog
+// included: that open-dialog window is what a plain in-flight flag misses.
+let claimBusy = false;
+let claimedSomething = false;   // only a real broadcast earns a chain refetch
+// Outpoints we have broadcast a spend for. Esplora keeps reporting them unspent for a
+// while, so without this the row just spent redraws as claimable.
+const spentPending = new Set();
+
+// Every Claim button, every row. A claim locks the whole table, not just its own row:
+// LOG Steps 32-33 showed a per-row lock still allowed a second submission.
+function claimButtons() {
+  return Array.from($("instances").querySelectorAll("tbody button"));
+}
+
+function lockClaimButtons(labelFor) {
+  for (const b of claimButtons()) {
+    b.disabled = true;
+    if (labelFor && b.dataset.key === labelFor) b.textContent = "Claiming…";
+  }
+}
+
+function renderInstances(instances) {
+  const c = needContract();
+  const tbody = $("instances").querySelector("tbody");
+  tbody.textContent = "";
+
+  if (!instances.length) {
+    $("instances").hidden = true;
+    return;
+  }
+
+  for (const inst of instances) {
+    const key = inst.txid + ":" + inst.vout;
+    const tr = document.createElement("tr");
+
+    const cell = (text, mono) => {
+      const td = document.createElement("td");
+      td.textContent = text;
+      if (mono) td.className = "mono";
+      return td;
+    };
+    tr.append(cell(inst.txid.slice(0, 16) + "…:" + inst.vout, true));
+    tr.append(cell(inst.blinded ? "blinded" : inst.value + " sats"));
+    // Liquid blocks come from scheduled signers at ~1 minute with very low variance,
+    // so "about N minutes" is an honest translation here in a way it would not be on
+    // a proof-of-work chain.
+    const left = c.params.mindist - inst.depth;
+    tr.append(cell(spentPending.has(key)
+      ? "spent, awaiting confirmation"
+      : inst.blinded
+      ? "unspendable, confidential output"
+      : !inst.confirmed
+      ? "unconfirmed (~1 min)"
+      : inst.ready
+      ? `ready (${inst.depth}/${c.params.mindist})`
+      : `${left} block${left === 1 ? "" : "s"} left, ~${left} min`));
+    tr.append(cell(inst.action));
+
+    const td = document.createElement("td");
+    const btn = document.createElement("button");
+    btn.dataset.key = key;
+    // In Humid mode the signing key lives in the extension, so this browser's own
+    // keypair says nothing about whether a withdrawal can be made, and gating on it would
+    // disable every Claim button on that path.
+    const mine = usingHumid() ? null : amIBeneficiary();
+    const spent = spentPending.has(key);
+    // Name the state rather than collapsing several into "Waiting": an instance is
+    // already spent, or unconfirmed, or confirmed but not yet old enough for BIP68.
+    btn.textContent = spent
+      ? "Spent"
+      : inst.blinded ? "Unspendable"
+      : inst.ready ? "Claim" : !inst.confirmed ? "Unconfirmed" : "Timelocked";
+    btn.disabled = spent || !inst.ready || claimBusy || mine === false;
+    // Say why, rather than letting the click fail several steps later.
+    btn.title = spent
+      ? "A spend of this instance has been broadcast. It leaves this list once the chain " +
+        "catches up; a partial withdrawal's continuation appears in its place."
+      : inst.blinded
+      ? "This is a confidential output. The contract's only spending path reads its own " +
+        "asset and amount directly, which works on an explicit output only, so these " +
+        "funds cannot be withdrawn by anyone. Fund the address with an explicit output."
+      : mine === false
+      ? "This browser does not hold the contract's BENEFICIARY_KEY, so it cannot sign a withdrawal."
+      : !inst.confirmed
+      ? "Waiting for this funding transaction to confirm."
+      : !inst.ready
+      ? `BIP68: ${left} more block${left === 1 ? "" : "s"} must pass before the network will relay a spend.`
+      : "";
+    btn.onclick = () => doClaim(inst);
+    td.append(btn);
+    tr.append(td);
+    tbody.append(tr);
+  }
+
+  $("instances").hidden = false;
+}
+
+async function refreshStatus() {
+  if (refreshing) { log("refresh already in flight, skipped"); return; }
+  refreshing = true;
+  show("out-status", "Querying Esplora…");
+  try {
+    const c = needContract();
+    lastInstances = await loadInstances();
+    renderInstances(lastInstances);
+    const total = lastInstances.reduce((n, i) => n + i.value, 0n);
+    const blind = lastInstances.filter((i) => i.blinded).length;
+    show("out-status", lastInstances.length
+      ? lastInstances.length + " instance(s) at " + c.address.toString() +
+        "\nholding " + total + " sats in total: separate allowances, each with its own " +
+        "timelock, which can never be merged." +
+        (blind ? "\n" + blind + " confidential output(s) here cannot be spent by anyone " +
+          "and are not counted in that total." : "") +
+        "\n" + EXPLORER_ADDR + c.address.toString()
+      : "No live instances at " + c.address.toString() +
+        "\n" + EXPLORER_ADDR + c.address.toString() +
+        "\n\nIf you just funded it, wait about a minute for a block.", "");
+  } catch (e) {
+    show("out-status", "Failed: " + errText(e), "err");
+    log("status failed:", errText(e));
+  } finally {
+    refreshing = false;
+    schedulePoll();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 7. Withdraw
+// ---------------------------------------------------------------------------
+
+// getSighashAll(), run() and finalizeTransaction() each CONSUME the TxOut array they
+// are given, and the typings say so explicitly, so every call needs a freshly built one.
+function freshWitnessUtxo(prevTxHex, vout) {
+  // fromString() rather than `new Transaction()`, and the `outputs` getter rather than
+  // `output(n)`: both of the latter are deprecated and newer lwk builds drop them, which
+  // surfaces as "(intermediate value).output is not a function". The getter returns a
+  // fresh clone of the array, which is what the consumed-TxOut problem above needs.
+  const outs = L.Transaction.fromString(prevTxHex).outputs;
+  const out = outs[vout];
+  if (!out) throw new Error(`previous transaction has no output ${vout}`);
+  return out;
+}
+
+// A claim is "busy" from the moment its button is clicked until it resolves,
+// including while the confirmation dialog is open, which is the window a plain
+// in-flight flag misses. Exactly one claim may occupy that window, page-wide.
+
+// The OK/Cancel handlers are assigned ONCE, here, and route to whichever claim is
+// currently waiting. Re-registering them per dialog is the precise bug in LOG Step 33:
+// listeners accumulated on the same buttons and one click fired several claims.
+// Assignment (rather than addEventListener) makes that structurally impossible.
+let pendingConfirm = null;
+
+function closeConfirm() {
+  $("confirm-modal").hidden = true;
+  $("confirm-body").textContent = "";
+}
+
+function settleConfirm(answer) {
+  const resolve = pendingConfirm;
+  pendingConfirm = null;
+  closeConfirm();
+  if (resolve) resolve(answer);
+}
+
+$("confirm-ok").onclick = () => settleConfirm(true);
+$("confirm-cancel").onclick = () => settleConfirm(false);
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape" && pendingConfirm) settleConfirm(false);
+});
+
+function askConfirm(summary) {
+  if (pendingConfirm) return Promise.resolve(false);   // one dialog at a time
+  $("confirm-body").textContent = summary;
+  $("confirm-modal").hidden = false;
+  $("confirm-ok").focus();
+  return new Promise((resolve) => { pendingConfirm = resolve; });
+}
+
+// Works out the amounts without touching the network, so the confirmation can show
+// real numbers before anything is fetched, signed or sent.
+function planWithdrawal(inst, c, payoutAddress) {
+  if (inst.action === "PartialWithdraw") {
+    const retained = inst.value - c.params.allowance;
+    const payout = c.params.allowance - WITHDRAW_FEE_SATS;
+    if (payout <= 0n) throw new Error("ALLOWANCE_AMOUNT is smaller than the fee.");
+    return { retained, payout, summary:
+      `action:    PartialWithdraw\n` +
+      `spending:  ${inst.txid}:${inst.vout}\n` +
+      `balance:   ${inst.value} sats\n` +
+      `\n` +
+      `output 0:  ${retained} sats back to the covenant\n` +
+      `           ${c.address.toString()}\n` +
+      `output 1:  ${payout} sats to you\n` +
+      `           ${payoutAddress.toString()}\n` +
+      `output 2:  ${WITHDRAW_FEE_SATS} sats fee\n` +
+      `\n` +
+      `After this, the allowance holds ${retained} sats and its timelock restarts.` };
+  }
+  const payout = inst.value - WITHDRAW_FEE_SATS;
+  if (payout <= 0n) throw new Error("This instance holds less than the fee.");
+  return { payout, summary:
+    `action:    FullWithdraw  (closes this allowance)\n` +
+    `spending:  ${inst.txid}:${inst.vout}\n` +
+    `balance:   ${inst.value} sats\n` +
+    `\n` +
+    `output 0:  ${payout} sats to you\n` +
+    `           ${payoutAddress.toString()}\n` +
+    `output 1:  ${WITHDRAW_FEE_SATS} sats fee\n` +
+    `\n` +
+    `This takes the whole remaining balance. The allowance ends here.` };
+}
+
+async function doClaim(inst) {
+  const key = inst.txid + ":" + inst.vout;
+
+  // Refuse visibly, not just in the log. Clicking a second Claim used to do nothing
+  // observable, which invites more clicking.
+  if (claimBusy) {
+    show("out-claim", "One withdrawal at a time. Finish or cancel the one already in " +
+      "progress before starting another: two transactions spending the same instance " +
+      "would collide, and the second would be rejected as a replacement.", "warn");
+    log("claim refused, another is busy:", key);
+    return;
+  }
+
+  const dryRun = $("wd-dryrun").checked;
+  claimBusy = true;
+  lockClaimButtons(key);
+
+  try {
+    const c = needContract();
+
+    if (usingHumid()) {
+      const warnFull = inst.action === "FullWithdraw"
+        ? "\n\nThis closes the allowance. It needs the patched Humid: unpatched, an action " +
+          "whose only output is policy-asset change is refused as \"pays nothing\"."
+        : "";
+      show("out-claim", "Waiting for you to confirm…");
+      const ok = await askConfirm(
+        `action:    ${inst.action}  (via Humid)\n` +
+        `spending:  ${inst.txid}:${inst.vout}\n` +
+        `balance:   ${inst.value} sats\n\n` +
+        `Humid builds, signs and broadcasts this itself from the manifest, and pays to its ` +
+        `own change address, so the payout field on this page does not apply. It shows its own ` +
+        (dryRun
+          ? `\n\nDRY RUN: broadcast:false, so Humid builds and signs but sends nothing.`
+          : "") +
+        `${warnFull}`);
+      if (!ok) {
+        show("out-claim", "Cancelled. Nothing was sent to Humid.", "");
+        return;
+      }
+
+      show("out-claim", "Handing " + inst.action + " to Humid. Confirm it in the extension…");
+      const result = await humidCall(inst.action, {
+        params: {},
+        // Double-nested on purpose: normaliseInstance() reads raw.instance.fields, not
+        // raw.fields. Getting this wrong fails silently and resurfaces much later as
+        // "X is neither a parameter nor an argument of this action".
+        instance: { instance: { fields: {
+          BENEFICIARY_KEY: c.params.benkey,
+          ALLOWANCE_AMOUNT: c.params.allowance.toString(),
+          MIN_DISTANCE: String(c.params.mindist),
+        } } },
+        // state is single-level, unlike instance. Humid re-derives amount and asset
+        // from the chain rather than trusting what a page claims.
+        state: { utxos: [{ txid: inst.txid, vout: inst.vout, utxo_type: "allowance" }] },
+        broadcast: !dryRun,
+      });
+      const txid = result && result.txid;
+      const sent = !!(result && result.broadcast);
+      claimedSomething = sent;
+      if (sent) spentPending.add(key);
+      show("out-claim",
+        (sent
+          ? inst.action + " broadcast by Humid."
+          : inst.action + " built and signed by Humid, not sent.") +
+        (txid ? "\ntxid: " + txid + (sent ? "\n" + EXPLORER_TX + txid : " (what it would be)") : "") +
+        (result && result.feeSats ? "\nfee: " + result.feeSats + " sats" : "") +
+        "\n\nfull response:\n" + JSON.stringify(result, null, 2), "");
+      log("humid " + inst.action + ":", (sent ? "broadcast " : "dry run ") + (txid || "no txid"));
+      return;
+    }
+
+    const kp = loadBeneficiaryKey();
+
+    if (kp.xOnlyPublicKey.toString() !== c.params.benkey) {
+      throw new Error(
+        "This browser's beneficiary key does not match the contract's BENEFICIARY_KEY, " +
+        "so any signature it makes will be rejected. You are the benefactor here, not the " +
+        "beneficiary. Claim from the beneficiary's own browser."
+      );
+    }
+
+    const plannedPayout = resolvePayoutAddress();
+    const plan = planWithdrawal(inst, c, plannedPayout);
+
+    show("out-claim", "Waiting for you to confirm…");
+    if (!await askConfirm(plan.summary)) {
+      show("out-claim", "Cancelled. Nothing was signed or sent.", "");
+      log("claim cancelled by user:", key);
+      return;
+    }
+
+    show("out-claim", "Building " + inst.action + " for " + key + " …\nThis takes a few " +
+      "seconds: it fetches the previous transaction, compiles the contract, runs it locally, " +
+      "then broadcasts.");
+
+    // The previous output, needed both as the PSET's witness_utxo and by the
+    // Simplicity sighash. Esplora has no per-vout endpoint, so fetch the raw
+    // transaction and take the output from it.
+    const prevTxHex = (await esplora(`/tx/${inst.txid}/hex`)).trim();
+
+    // One input, sequence carrying the BIP68 relative-block distance. The contract
+    // demands exactly one input, and rejects a time-based encoding.
+    const input = L.PsetInputBuilder
+      .fromPrevout(L.OutPoint.fromParts(new L.Txid(inst.txid), inst.vout))
+      .witnessUtxo(freshWitnessUtxo(prevTxHex, inst.vout))
+      .sequence(L.TxSequence.fromHeight(c.params.mindist))
+      .build();
+
+    const payoutAddress = plannedPayout;
+    log("paying out to", payoutAddress.toString());
+    // PsetBuilder's methods are declared `mut self` in Rust, so each one MOVES the
+    // builder and hands back a new JS handle: the old variable is freed. Every step
+    // must be reassigned. Calling two methods on the same saved handle, or reusing
+    // it after a chain, raises "null pointer passed to rust" from somewhere
+    // unrelated-looking, which is how this was found.
+    let builder = L.PsetBuilder.newV2().addInput(input);
+
+    // Output order is load-bearing on the partial path: recursive_covenant() checks
+    // output 0's script hash against its own, and requires output 2 to be the fee.
+    // An Elements fee output is an explicit output with an empty script.
+    const out = (script, sats) =>
+      L.PsetOutputBuilder.newExplicit(script, sats, policyAsset).build();
+
+    // Amounts come from the plan the user actually confirmed, so what gets signed is
+    // what the dialog showed.
+    if (inst.action === "PartialWithdraw") {
+      builder = builder.addOutput(out(c.address.scriptPubkey(), plan.retained));
+      builder = builder.addOutput(out(payoutAddress.scriptPubkey(), plan.payout));
+      builder = builder.addOutput(out(L.Script.empty(), WITHDRAW_FEE_SATS));
+    } else {
+      builder = builder.addOutput(out(payoutAddress.scriptPubkey(), plan.payout));
+      builder = builder.addOutput(out(L.Script.empty(), WITHDRAW_FEE_SATS));
+    }
+
+    const tx = builder.build().extractTx();
+
+    // Sign the Simplicity sighash with the beneficiary's BIP340 key, then satisfy
+    // witness::SIGNATURE with it.
+    const sighash = c.program.getSighashAll(
+      tx, c.internalKey, [freshWitnessUtxo(prevTxHex, inst.vout)], 0, network);
+    log("sighash", sighash);
+
+    const signature = kp.signSchnorr(sighash);
+    const witness = new L.SimplicityWitnessValues()
+      .addValue("SIGNATURE", L.SimplicityTypedValue.fromByteArrayHex(signature));
+
+    // Run the contract locally before paying for a broadcast. A failure here is the
+    // contract refusing, and the log level gives the jet trace.
+    const result = c.program.run(
+      tx, c.internalKey, [freshWitnessUtxo(prevTxHex, inst.vout)], 0,
+      new L.SimplicityWitnessValues().addValue(
+        "SIGNATURE", L.SimplicityTypedValue.fromByteArrayHex(signature)),
+      network, L.SimplicityLogLevel.Debug);
+    log("local run ok, pruned cmr", result.cmr.toString());
+
+    const finalTx = c.program.finalizeTransaction(
+      tx, c.internalKey, [freshWitnessUtxo(prevTxHex, inst.vout)], 0,
+      witness, network, L.SimplicityLogLevel.None);
+
+    if (dryRun) {
+      show("out-claim",
+        inst.action + " built and signed, nothing broadcast.\n" +
+        "txid it would have: " + finalTx.txid().toString() +
+        "\nsize: " + finalTx.toBytes().length + " bytes" +
+        "\npruned CMR from the local run: " + result.cmr.toString() +
+        "\n\nThe contract accepted this spend when run locally, so the compile, the " +
+        "sighash and the signature are all good. Untick “Dry run” to send it.", "");
+      log("dry run ok for", key, finalTx.txid().toString());
+      return;
+    }
+
+    show("out-claim", "Broadcasting " + inst.action + " …");
+    const txid = await client.broadcastTx(finalTx);
+    claimedSomething = true;
+    spentPending.add(key);
+    show("out-claim", inst.action + " broadcast.\n" +
+      "txid: " + txid.toString() + "\n" + EXPLORER_TX + txid.toString() +
+      "\npaid to: " + payoutAddress.toString() +
+      (inst.action === "PartialWithdraw"
+        ? "\n\nThe remainder went back to the same covenant address as a new instance. " +
+          "It will appear above once the transaction confirms, with its timelock counting " +
+          "again from that block."
+        : "\n\nThat was the whole remaining balance, so this allowance is now closed."), "");
+    log("claimed", key, "→", txid.toString());
+  } catch (e) {
+    const msg = errText(e);
+    // A same-feerate replacement rejection means an earlier attempt already made it
+    // into the mempool, so the withdrawal probably succeeded.
+    const dup = /rejecting replacement|insufficient fee/i.test(msg);
+    const bip68 = /non-BIP68-final/i.test(msg);
+    show("out-claim", (dup
+      ? "Rejected as a replacement, which usually means an earlier attempt already " +
+        "succeeded. Check the explorer before retrying.\n\n"
+      : bip68
+      ? "Rejected as non-BIP68-final: the network agrees with the contract that not enough " +
+        "blocks have passed yet. This is the timelock working, not a bug. Wait and retry.\n\n"
+      : "") + inst.action + " failed: " + msg, (dup || bip68) ? "warn" : "err");
+    log("claim failed:", key, msg);
+  } finally {
+    claimBusy = false;
+    if (pendingConfirm) settleConfirm(false);   // never leave the dialog stuck open
+    // Re-render from what we already have so a cancel costs no network round trip;
+    // a completed claim refreshes properly below.
+    try { renderInstances(lastInstances); } catch { /* nothing rendered yet */ }
+    if (claimedSomething) { claimedSomething = false; await refreshStatus(); }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Humid: the same contract driven through a real browser-extension wallet
+// ---------------------------------------------------------------------------
+//
+// Humid's injected provider exposes only six CAIP-25/27 session methods. Every
+// chain method (processConfidentialTransaction, getWalletDescriptor) has to go
+// through wallet_invokeMethod inside a session created by wallet_createSession.
+// Scope id is LiquidChain.ts's LIQUID_TESTNET_CHAIN_ID.
+const LIQUID_TESTNET_SCOPE = "bip122:a771da8e52ee6ad581ed1e9a99825e5b";
+const HUMID_MANIFEST = "./txmanifest.humid.json";
+
+let signerMode = "page";          // "page" | "humid"
+let humidSessionId = null;
+let humidManifest = null;
+
+const usingHumid = () => signerMode === "humid";
+
+for (const radio of document.querySelectorAll('input[name="signer"]')) {
+  radio.onchange = () => {
+    signerMode = radio.value;
+    $("humid-box").hidden = !usingHumid();
+    log("signer mode:", signerMode);
+    updateUi();
+  };
+}
+
+async function humidRequest(method, params) {
+  if (!window.humid) {
+    throw new Error(
+      "window.humid is not present. Humid is not installed, not enabled, or not injecting " +
+      "into this page. Load the extension at chrome://extensions and open this page over " +
+      "http://, not file://."
+    );
+  }
+  return window.humid.request({ method, params });
+}
+
+// wallet_createSession ALWAYS shows Humid's "Connect this dapp?" dialog; the handler
+// calls confirm() unconditionally, with no check for an existing authorization. So
+// creating a session per call means approving a connection per action.
+//
+// Sessions are stored with a 30-day TTL, but in the account model, and invokeMethod
+// requires the wallet unlocked, and under Chrome's MV3 service-worker lifecycle that
+// combination expires in practice far sooner than the TTL suggests. So neither
+// "always create" nor "create once" is right.
+//
+// Try the call first and only establish a session if it is actually refused. One
+// prompt when needed, none when a session already happens to be live.
+function looksUnauthorized(e) {
+  const msg = (e && (e.message || e.reason || "")) + "";
+  return /no active session|not authorized|unauthorized|createSession/i.test(msg);
+}
+
+async function invokeHumid(method, params) {
+  const invoke = () => humidRequest("wallet_invokeMethod", {
+    scope: LIQUID_TESTNET_SCOPE,
+    ...(humidSessionId ? { sessionId: humidSessionId } : {}),
+    request: { method, params },
+  });
+
+  try {
+    return await invoke();
+  } catch (e) {
+    if (!looksUnauthorized(e)) throw e;
+    log("no usable Humid session, asking it to connect");
+    const session = await humidRequest("wallet_createSession", {
+      requiredScopes: { [LIQUID_TESTNET_SCOPE]: { methods: [method], notifications: [] } },
+    });
+    humidSessionId = (session && session.sessionId) || humidSessionId;
+    return invoke();
+  }
+}
+
+async function loadHumidManifest() {
+  if (humidManifest) return humidManifest;
+  const res = await fetch(HUMID_MANIFEST);
+  if (!res.ok) throw new Error(`could not read ${HUMID_MANIFEST} (HTTP ${res.status})`);
+  humidManifest = await res.json();
+  return humidManifest;
+}
+
+async function humidCall(action, extra) {
+  const [manifest, source] = await Promise.all([
+    loadHumidManifest(),
+    fetch("./allowance.simf").then((r) => r.text()),
+  ]);
+  // The manifest names its source "./allowance.simf", so the key must match exactly.
+  return invokeHumid("processConfidentialTransaction", {
+    manifest,
+    contractSources: { "./allowance.simf": source },
+    action,
+    ...extra,
+  });
+}
+
+// Humid has no UI showing your own public key, so derive it from the descriptor it
+// will sign with: a BIP-84 xpub already at m/84'/1'/0', plus two non-hardened steps
+// (external chain, first address). The curve maths comes from a dynamic import so the
+// local-only path keeps working with no network and no CDN.
+async function humidBeneficiaryKey() {
+  const result = await invokeHumid("getWalletDescriptor", {
+    descriptorType: "publicWalletDescriptor",
+    descriptorFormat: [{ format: "bip380-split-branches" }],
+  });
+
+  const branches = result?.descriptors?.[0]?.branchDescriptors || [];
+  const external = branches.find((b) => b.branch === "external");
+  if (!external) throw new Error("no external branch in Humid's descriptor response");
+  const match = /\]([tx]pub[1-9A-HJ-NP-Za-km-z]+)\//.exec(external.descriptor);
+  if (!match) throw new Error("no xpub inside the descriptor string");
+
+  const [{ secp256k1 }, { sha256 }, { base58check }] = await Promise.all([
+    import("https://cdn.jsdelivr.net/npm/@noble/curves@1.9.7/secp256k1.js/+esm"),
+    import("https://cdn.jsdelivr.net/npm/@noble/hashes@1.8.0/sha2.js/+esm"),
+    import("https://cdn.jsdelivr.net/npm/@scure/base@1.1.1/+esm"),
+  ]);
+
+  const raw = base58check(sha256).decode(match[1]);
+  if (raw.length !== 78) throw new Error(`decoded xpub is ${raw.length} bytes, expected 78`);
+
+  const beToBigInt = (bytes) => bytes.reduce((n, b) => (n << 8n) | BigInt(b), 0n);
+  const hmac512 = async (keyBytes, dataBytes) => {
+    const k = await crypto.subtle.importKey(
+      "raw", keyBytes, { name: "HMAC", hash: "SHA-512" }, false, ["sign"]);
+    return new Uint8Array(await crypto.subtle.sign("HMAC", k, dataBytes));
+  };
+  const ckdPub = async (pubkey, chaincode, index) => {
+    const data = new Uint8Array(37);
+    data.set(pubkey, 0);
+    new DataView(data.buffer).setUint32(33, index, false);
+    const I = await hmac512(chaincode, data);
+    const point = secp256k1.ProjectivePoint.BASE.multiply(beToBigInt(I.slice(0, 32)))
+      .add(secp256k1.ProjectivePoint.fromHex(hex(pubkey)));
+    return { pubkey: point.toRawBytes(true), chaincode: I.slice(32, 64) };
+  };
+
+  const chain = await ckdPub(raw.slice(45, 78), raw.slice(13, 45), 0);
+  const first = await ckdPub(chain.pubkey, chain.chaincode, 0);
+  return { xonly: hex(first.pubkey.slice(1)), descriptor: external.descriptor };
+}
+
+$("btn-humid-detect").onclick = async () => {
+  show("out-humid", "Looking for the extension…");
+  try {
+    if (!window.humid) throw new Error("window.humid is not present on this page.");
+    // getSession reads state without prompting, unlike createSession.
+    const session = await humidRequest("wallet_getSession", {});
+    const scopes = (session && session.sessionScopes) || {};
+    const live = Object.keys(scopes).length > 0;
+    show("out-humid",
+      "Humid is injecting into this page.\n" +
+      "authorized session for this origin: " + (live ? "yes: " + Object.keys(scopes).join(", ") : "none") +
+      "\n\n" + (live
+        ? "Actions should go straight through without a connect prompt."
+        : "Humid will ask you to connect the first time an action needs it. Expect that " +
+          "prompt again whenever the extension's worker restarts or the wallet locks.") +
+      "\n\nNext: “Get my key from Humid”, then compile with that key on the benefactor tab.",
+      "");
+    log("humid detected");
+  } catch (e) {
+    show("out-humid", "Not usable: " + errText(e), "err");
+  }
+};
+
+$("btn-humid-key").onclick = async () => {
+  show("out-humid", "Asking Humid for its wallet descriptor…");
+  try {
+    const { xonly, descriptor } = await humidBeneficiaryKey();
+    $("benkey").value = xonly;
+    flash("benkey");
+    updateHints();
+    show("out-humid",
+      "Derived from Humid's own descriptor, so this is the key Humid will sign with:\n" +
+      xonly +
+      "\n\nraw descriptor, so the derivation is checkable rather than trusted:\n" +
+      descriptor +
+      "\n\nIt is now in the BENEFICIARY_KEY field. Compile on the benefactor tab to get " +
+      "the covenant address for this key.", "");
+    log("humid beneficiary key:", xonly);
+  } catch (e) {
+    show("out-humid", "Failed: " + errText(e), "err");
+    log("humid key derivation failed:", errText(e));
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Tabs, derived values, and visible evidence when the page fills something in
+// ---------------------------------------------------------------------------
+
+function showTab(name) {
+  for (const b of document.querySelectorAll(".tab-btn")) {
+    b.classList.toggle("active", b.dataset.tab === name);
+  }
+  for (const panel of ["benefactor", "beneficiary", "about"]) {
+    $("tab-" + panel).hidden = panel !== name;
+  }
+}
+for (const b of document.querySelectorAll(".tab-btn")) {
+  b.onclick = () => showTab(b.dataset.tab);
+}
+
+// Briefly highlight a field the page just populated, so an automatic copy is
+// visible rather than magic.
+function flash(id) {
+  const el = $(id);
+  if (!el) return;
+  el.classList.remove("arrived");
+  void el.offsetWidth;          // restart the animation
+  el.classList.add("arrived");
+}
+
+const asLbtc = (sats) => "≈ " + (Number(sats) / 1e8).toFixed(8) + " tLBTC";
+
+// Liquid blocks are ~1 minute and low-variance, so blocks translate honestly to time.
+function blocksAsTime(blocks) {
+  if (!Number.isFinite(blocks) || blocks <= 0) return "";
+  if (blocks < 90) return "≈ " + blocks + " min";
+  if (blocks < 2880) return "≈ " + (blocks / 60).toFixed(1) + " hours";
+  return "≈ " + (blocks / 1440).toFixed(1) + " days";
+}
+
+// Everything derivable from what is already typed, recomputed live. Nothing here
+// touches the network.
+function updateHints() {
+  const key = $("benkey").value.trim().toLowerCase();
+  const keyOk = /^[0-9a-f]{64}$/.test(key);
+  const mineKey = benKeypair && benKeypair.xOnlyPublicKey.toString() === key;
+  $("hint-benkey").textContent = !key
+    ? (usingHumid()
+        ? "Press “Get my key from Humid” above. This must be the key Humid will sign with."
+        : "The beneficiary generates this on their own machine and sends you the public half.")
+    : !keyOk
+    ? "Not a valid key: expected exactly 64 hex characters, got " + key.length + "."
+    : usingHumid()
+    ? "Make sure this came from “Get my key from Humid”. Any other key gives an address Humid cannot claim."
+    : mineKey
+    ? "This is this browser's own key: a single-wallet test."
+    : "Looks like a valid x-only pubkey.";
+
+  const allowance = Number($("allowance").value);
+  $("hint-allowance").textContent = allowance > 0 ? asLbtc(allowance) : "";
+
+  const mindist = Number($("mindist").value);
+  $("hint-mindist").textContent = mindist > 0
+    ? blocksAsTime(mindist) + (mindist > 60 ? " (realistic, but a slow demo; try 3)" : "")
+    : "";
+
+  const fund = Number($("fundamt").value);
+  if (fund > 0 && allowance > 0) {
+    const periods = Math.floor(fund / allowance);
+    $("hint-fundamt").textContent = asLbtc(fund) +
+      (periods >= 1
+        ? `, about ${periods} withdrawal${periods === 1 ? "" : "s"} of ${allowance} sats` +
+          (mindist > 0 ? `, so ${blocksAsTime(periods * mindist).replace("≈ ", "")} to empty` : "")
+        : ", less than one full withdrawal, so it closes on the first claim");
+  } else {
+    $("hint-fundamt").textContent = fund > 0 ? asLbtc(fund) : "";
+  }
+}
+
+for (const id of ["benkey", "allowance", "mindist", "fundamt"]) {
+  $(id).addEventListener("input", updateHints);
+}
+
+function saveParams(params) {
+  localStorage.setItem(LS.params, JSON.stringify({
+    benkey: params.benkey,
+    allowance: params.allowance.toString(),
+    mindist: params.mindist,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Standing UI state: what is true, what is allowed, what flows forward
+// ---------------------------------------------------------------------------
+
+let walletBalanceSats = null;   // null = not synced yet
+
+// LWK's Balance is an asset-keyed map; read the policy asset out of it, but never
+// let a shape surprise break the page; fall back to showing it raw.
+function policyBalanceOf(w) {
+  try {
+    const json = w.balance().toJSON();
+    const key = policyAsset.toString();
+    const raw = json && (json[key] ?? json.get?.(key));
+    if (raw === undefined || raw === null) return null;
+    return BigInt(raw);
+  } catch {
+    return null;
+  }
+}
+
+const fact = (id, text, cls) => {
+  const el = $(id);
+  el.textContent = text;
+  el.className = cls || "";
+};
+
+function amIBeneficiary() {
+  if (!contract || !benKeypair) return null;
+  return benKeypair.xOnlyPublicKey.toString() === contract.params.benkey;
+}
+
+// Single source of truth for which controls make sense right now. Called after
+// anything changes state. Disabling with a visible reason teaches the order of
+// operations better than letting a click fail.
+function updateUi() {
+  const hasLib = !!L;
+  const hasWallet = !!wollet;
+  const hasContract = !!contract;
+  const mine = amIBeneficiary();
+
+  // Which signer is selected decides BENEFICIARY_KEY and therefore the covenant address,
+  // so it is the one piece of state worth stating where it cannot be missed.
+  $("signer-chip").textContent = usingHumid() ? "signing via Humid" : "in-page signing";
+
+  fact("f-lib", hasLib ? "loaded: Liquid testnet" : "not loaded", hasLib ? "ok" : "no");
+
+  if (hasWallet) {
+    fact("f-wallet", wollet.address().address().toString(), "");
+  } else {
+    fact("f-wallet", hasLib
+      ? "not open: needed to fund, and as a default payout destination"
+      : "not open", "no");
+  }
+
+  if (walletBalanceSats === null) {
+    fact("f-balance", hasWallet ? "press “Sync & show balance”" : "unknown", "no");
+  } else {
+    fact("f-balance", walletBalanceSats + " sats" +
+      (walletBalanceSats === 0n ? " (use the faucet)" : ""),
+      walletBalanceSats === 0n ? "alert" : "ok");
+  }
+
+  fact("f-key", benKeypair ? benKeypair.xOnlyPublicKey.toString() : "not generated",
+       benKeypair ? "ok" : "no");
+
+  if (hasContract) {
+    fact("f-contract", contract.address.toString() + "  (" +
+      contract.params.allowance + " sats every " + contract.params.mindist + " blocks)", "ok");
+  } else {
+    fact("f-contract", "not compiled", "no");
+  }
+
+  // Capability, scoped and literal: never a claim about who you are, nor about what
+  // you have already done, which this page does not durably record.
+  if (usingHumid()) {
+    fact("f-can-fund", "via Humid: it holds the funds; no balance visible here", "ok");
+  } else if (!hasWallet) {
+    fact("f-can-fund", "no: no wallet open in this browser", "no");
+  } else if (walletBalanceSats === null) {
+    fact("f-can-fund", "wallet open, balance not yet synced", "no");
+  } else if (walletBalanceSats === 0n) {
+    fact("f-can-fund", "no: this wallet is empty; use the faucet", "alert");
+  } else {
+    fact("f-can-fund", "yes: " + walletBalanceSats + " sats available to lock", "ok");
+  }
+
+  if (usingHumid()) {
+    fact("f-can-withdraw", hasContract
+      ? "via Humid: it signs, so this page cannot verify the key matches"
+      : "no allowance loaded yet", hasContract ? "ok" : "no");
+  } else if (!hasContract) {
+    fact("f-can-withdraw", "no allowance loaded yet", "no");
+  } else if (!benKeypair) {
+    fact("f-can-withdraw", "unknown: no key generated in this browser yet", "no");
+  } else if (mine) {
+    fact("f-can-withdraw",
+      "yes: this browser holds the BENEFICIARY_KEY these terms name", "ok");
+  } else {
+    fact("f-can-withdraw",
+      "no: these terms name a different beneficiary, so this browser can only watch",
+      "alert");
+  }
+
+  fact("f-fee", WITHDRAW_FEE_SATS + " sats, taken from the allowance itself");
+
+  // Prerequisites, so a disabled button says "not yet" instead of failing.
+  const set = (id, enabled, why) => {
+    const b = $(id);
+    if (!b) return;
+    b.disabled = !enabled;
+    b.title = enabled ? "" : why;
+  };
+  $("wallet-humid-note").hidden = !usingHumid();
+  set("btn-sync", hasWallet && !usingHumid(),
+      usingHumid() ? "Humid holds its own funds; this wallet is unused." : "Open a wallet on the benefactor tab first.");
+  set("btn-faucet", hasWallet && !usingHumid(),
+      usingHumid() ? "This would fund the page's wallet, which Humid does not use. Fund Humid through the extension." : "Open a wallet on the benefactor tab first.");
+  set("btn-wallet", hasLib && !usingHumid(),
+      usingHumid() ? "Not needed: Humid is signing." : "The library is still loading.");
+  set("btn-key-secret", hasLib && !!benKeypair && !usingHumid(), "Generate a key first.");
+  set("btn-compile", hasLib, "Waiting for the library to load.");
+  set("btn-usemine", hasLib && !usingHumid(),
+      usingHumid()
+        ? "Humid signs on this path. Use “Get my key from Humid” instead, or this compiles an address Humid cannot claim."
+        : "Waiting for the library to load.");
+  set("btn-key", hasLib && !usingHumid(),
+      usingHumid() ? "Humid holds the signing key on this path." : "Waiting for the library to load.");
+  set("btn-terms-copy", hasContract, "No contract yet. Compile one, or load the terms the benefactor sent you.");
+  set("btn-terms-load", hasLib, "Waiting for the library to load.");
+  set("btn-fund", hasContract && (usingHumid() || hasWallet),
+      !hasContract
+        ? "No contract yet. Compile one, or load the terms the benefactor sent you."
+        : "Open and fund a wallet on the benefactor tab.");
+  set("btn-status", hasContract, "No contract yet. Compile one, or load the terms the benefactor sent you.");
+  set("btn-copy-address", hasContract, "No contract yet, so there is no address to copy.");
+  set("btn-payout-mine", hasWallet && !usingHumid(),
+      usingHumid()
+        ? "Humid pays to its own change address, so this does not apply."
+        : "Open a wallet on the benefactor tab first.");
+
+  set("btn-manual-load", hasLib, "Waiting for the library to load.");
+
+  // A prominent warning beats discovering it when a Claim button refuses.
+  const warn = $("warn-key");
+  if (hasContract && mine === false && !usingHumid()) {
+    warn.textContent =
+      "These terms name a different beneficiary. This browser holds " +
+      (benKeypair ? benKeypair.xOnlyPublicKey.toString().slice(0, 16) + "…" : "no key") +
+      ", but the contract requires " + contract.params.benkey.slice(0, 16) + "…. " +
+      "You can watch these instances, but no signature from here can withdraw them; " +
+      "claim from the beneficiary's own browser profile.";
+    warn.hidden = false;
+  } else {
+    warn.hidden = true;
+  }
+
+  updateHints();
+
+  // Re-render the table so Claim buttons pick up a changed role.
+  if (hasContract && lastInstances.length) {
+    try { renderInstances(lastInstances); } catch { /* not ready */ }
+  }
+}
+
+// Every static button becomes single-flight: a second click while its own handler is
+// still running is ignored. Without this, double-clicking Fund broadcasts twice, and
+// since enforce_single_input() means instances can never be merged, that leaves two
+// separate unmergeable allowances.
+function makeButtonsSingleFlight() {
+  for (const btn of document.querySelectorAll("button")) {
+    // Tab switching and the confirmation dialog are synchronous navigation, not work:
+    // they are idempotent, must stay clickable, and guarding them is what made each
+    // tab clickable only once.
+    if (btn.classList.contains("tab-btn")) continue;
+    if (btn.id === "confirm-ok" || btn.id === "confirm-cancel") continue;
+
+    const original = btn.onclick;
+    if (!original) continue;
+    let running = false;
+    btn.onclick = async (ev) => {
+      if (running) return;
+      running = true;
+      const label = btn.textContent;
+      // Restore the state we found, then let updateUi() apply policy. Leaving the
+      // button disabled and trusting updateUi() to re-enable it only works for the
+      // buttons updateUi() knows by id; everything else (Load, Clear) would stay
+      // dead after one click, including after a failure you would want to retry.
+      const wasDisabled = btn.disabled;
+      btn.disabled = true;
+      btn.textContent = label.replace(/\s*…$/, "") + " …";
+      try {
+        await original.call(btn, ev);
+      } finally {
+        running = false;
+        btn.textContent = label;
+        btn.disabled = wasDisabled;
+        updateUi();
+      }
+    };
+  }
+}
+
+// Automatic refreshing, paced against a shared third-party Esplora rather than
+// against impatience. Each refresh costs two requests, so the interval is derived
+// from how long there is actually left to wait:
+//
+//   - nothing pending            → do not poll at all
+//   - waiting for a confirmation → 60s, about one Liquid block
+//   - waiting out a timelock     → roughly half the remaining blocks, 60s .. 10 min
+//   - throttle signal seen       → not before the stand-down expires
+//   - tab hidden                 → check back later without fetching
+//
+// Hard-stopped after an hour of unattended polling: a page left open while a
+// 1440-block MIN_DISTANCE elapses would otherwise make thousands of requests
+// against a service nobody here operates.
+let pollTimer = null;
+let pollStartedAt = 0;
+const POLL_GIVE_UP_MS = 3600000;
+
+function pollDelayMs() {
+  const unconfirmed = lastInstances.some((i) => !i.confirmed);
+  if (unconfirmed) return 60000;
+  const waits = lastInstances
+    .filter((i) => !i.ready && !i.blinded && contract)
+    .map((i) => Math.max(1, contract.params.mindist - i.depth));
+  if (!waits.length) return 0;
+  const blocksLeft = Math.min(...waits);
+  // ~1 minute per Liquid block, and low-variance, so this estimate is honest.
+  const halfTheWaitMs = (blocksLeft * 60000) / 2;
+  return Math.min(Math.max(halfTheWaitMs, 60000), 600000);
+}
+
+function schedulePoll() {
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+  if (!contract || claimBusy) return;
+
+  const delay = pollDelayMs();
+  if (!delay) { pollStartedAt = 0; return; }        // nothing pending
+
+  if (!pollStartedAt) pollStartedAt = Date.now();
+  if (Date.now() - pollStartedAt > POLL_GIVE_UP_MS) {
+    show("out-status", $("out-status").textContent +
+      "\n\nAutomatic refreshing stopped after an hour to stay friendly to the public " +
+      "Esplora instance. Press “Refresh status” when you want an update.", "warn");
+    pollStartedAt = 0;
+    return;
+  }
+
+  const wait = Math.max(delay, throttledUntil - Date.now());
+  log("next automatic refresh in " + Math.round(wait / 1000) + "s");
+  pollTimer = setTimeout(async () => {
+    pollTimer = null;
+    if (claimBusy) { schedulePoll(); return; }
+    // Don't spend a request on a tab nobody is looking at.
+    if (document.hidden) { schedulePoll(); return; }
+    await refreshStatus();
+  }, wait);
+}
+
+// Coming back to the tab is a good moment to refresh once, if something is pending
+// and we are not in a stand-down.
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && contract && !claimBusy && pollDelayMs() &&
+      Date.now() >= throttledUntil) {
+    refreshStatus();
+  }
+});
+
+$("btn-clearlog").onclick = () => { $("log").textContent = ""; };
+
+makeButtonsSingleFlight();
+updateUi();
+
+// Loading the library is a prerequisite, not a choice, so do it without being asked.
+// It handles its own errors, so this is deliberately not awaited.
+loadLibrary();
+
+log("page loaded; press “Load lwk_wasm” to begin");
+</script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+{
+    "manifest_version": "0.1.0",
+    "protocol": "allowance",
+    "description": "Allowance: a recursive covenant letting a beneficiary withdraw up to ALLOWANCE_AMOUNT, no more often than once every MIN_DISTANCE blocks, until the balance is exhausted. One instance per funded allowance.",
+    "chain": "liquid",
+    "utxo_types": {
+        "allowance": {
+            "description": "Funds locked under the allowance covenant.",
+            "script": {
+                "type": "simplicity",
+                "source": "./allowance.simf",
+                "compile_params": {
+                    "BENEFICIARY_KEY": "BENEFICIARY_KEY",
+                    "ALLOWANCE_AMOUNT": "ALLOWANCE_AMOUNT",
+                    "MIN_DISTANCE": "MIN_DISTANCE"
+                }
+            },
+            "asset": "lbtc",
+            "confidential": false
+        }
+    },
+    "contract_templates": {
+        "allowance_contract": {
+            "description": "An allowance covenant. One instance per funded allowance: created by Fund, then drawn down via PartialWithdraw until the remaining balance is small enough for FullWithdraw to close it out.",
+            "fields": {
+                "BENEFICIARY_KEY": {
+                    "type": "pubkey"
+                },
+                "ALLOWANCE_AMOUNT": {
+                    "type": "u64"
+                },
+                "MIN_DISTANCE": {
+                    "type": "u16"
+                }
+            },
+            "actions": {
+                "Fund": {
+                    "description": "Set up the allowance: lock funds into the covenant and write the instance file recording its terms.",
+                    "params": {
+                        "BENEFICIARY_KEY": {
+                            "type": "pubkey",
+                            "description": "The beneficiary's x-only public key, obtained from them out of band. They can withdraw from this instance."
+                        },
+                        "ALLOWANCE_AMOUNT": {
+                            "type": "u64",
+                            "description": "Sats the beneficiary may withdraw per period."
+                        },
+                        "MIN_DISTANCE": {
+                            "type": "u16",
+                            "description": "Blocks that must pass between withdrawals. ~1-minute Liquid blocks, so e.g. 1440 is roughly a day. Max 65535."
+                        },
+                        "amount_sat": {
+                            "type": "u64",
+                            "description": "Amount in satoshis to place under the allowance."
+                        }
+                    },
+                    "inputs": [
+                        {
+                            "id": "funding_input",
+                            "description": "Wallet UTXO providing the funds.",
+                            "utxo_source": "wallet",
+                            "asset": "lbtc",
+                            "amount_sat": {
+                                "min_amount": "params.amount_sat"
+                            }
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "id": "allowance_out",
+                            "description": "The funded allowance output.",
+                            "destination": {
+                                "utxo_type": "allowance"
+                            },
+                            "amount_sat": "params.amount_sat",
+                            "asset": "lbtc"
+                        },
+                        {
+                            "id": "change_out",
+                            "description": "Change returned to the funding wallet.",
+                            "destination": "change",
+                            "asset": "lbtc",
+                            "optional": true
+                        }
+                    ],
+                    "create_instance": {
+                        "fields": {
+                            "BENEFICIARY_KEY": "$params.BENEFICIARY_KEY",
+                            "ALLOWANCE_AMOUNT": "$params.ALLOWANCE_AMOUNT",
+                            "MIN_DISTANCE": "$params.MIN_DISTANCE"
+                        }
+                    }
+                },
+                "PartialWithdraw": {
+                    "description": "Beneficiary takes exactly ALLOWANCE_AMOUNT (minus fee) and recreates the covenant with the remainder. Output 0 must be the same allowance covenant; output 1 is the beneficiary's payout.",
+                    "inputs": [
+                        {
+                            "id": "allowance_in",
+                            "description": "The allowance covenant UTXO, located via the state file.",
+                            "utxo_source": {
+                                "utxo_type": "allowance"
+                            },
+                            "sequence": {
+                                "relative_blocks": "instance.MIN_DISTANCE"
+                            },
+                            "witnesses": {
+                                "SIGNATURE": {
+                                    "type": "Signature",
+                                    "sig_type": "sig_hash_all",
+                                    "source": {
+                                        "type": "wallet",
+                                        "key": "instance.BENEFICIARY_KEY"
+                                    },
+                                    "description": "BIP340 signature from the beneficiary's key."
+                                }
+                            }
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "id": "allowance_again",
+                            "description": "The re-locked allowance output (same covenant address), holding the remainder. Must be output 0.",
+                            "destination": {
+                                "utxo_type": "allowance"
+                            },
+                            "asset": "lbtc",
+                            "amount_sat": "allowance_in.amount_sat - instance.ALLOWANCE_AMOUNT",
+                            "required_index": 0
+                        },
+                        {
+                            "id": "beneficiary_payout",
+                            "description": "The beneficiary's withdrawal for this period. The fee comes out of the allowance itself, so this pays whatever remains after the continuation output and the fee.",
+                            "destination": "change",
+                            "asset": "lbtc",
+                            "required_index": 1
+                        }
+                    ]
+                },
+                "FullWithdraw": {
+                    "description": "Beneficiary takes everything remaining (only valid once the balance has dropped to ALLOWANCE_AMOUNT or less) and the covenant ends. No continuation output.",
+                    "inputs": [
+                        {
+                            "id": "allowance_in",
+                            "description": "The allowance covenant UTXO, located via the state file.",
+                            "utxo_source": {
+                                "utxo_type": "allowance"
+                            },
+                            "sequence": {
+                                "relative_blocks": "instance.MIN_DISTANCE"
+                            },
+                            "witnesses": {
+                                "SIGNATURE": {
+                                    "type": "Signature",
+                                    "sig_type": "sig_hash_all",
+                                    "source": {
+                                        "type": "wallet",
+                                        "key": "instance.BENEFICIARY_KEY"
+                                    },
+                                    "description": "BIP340 signature from the beneficiary's key."
+                                }
+                            }
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "id": "beneficiary_payout",
+                            "description": "Everything remaining in the allowance, sent to the beneficiary's wallet, less the fee. This closes the allowance.",
+                            "destination": "change",
+                            "asset": "lbtc"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

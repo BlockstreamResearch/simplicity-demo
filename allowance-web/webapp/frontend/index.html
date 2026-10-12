@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Allowance Contract (Liquid testnet demo)</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Allowance contract <span class="badge">Liquid testnet: demo, not real money</span></h1>
+  <p class="tagline">
+    A benefactor deposits tLBTC once. A beneficiary can withdraw a limited amount,
+    no more often than once every set number of blocks, until the balance runs out.
+    This app runs the real, working <code>tx-manifest-wallet</code> engine behind the
+    scenes, and every action here is a genuine, signed, broadcast Liquid testnet
+    transaction.
+  </p>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="benefactor">I'm the benefactor (setting up an allowance)</button>
+  <button class="tab-btn" data-tab="beneficiary">I'm the beneficiary (claiming an allowance)</button>
+  <button class="tab-btn" data-tab="about">How this works</button>
+</nav>
+
+<main>
+  <!-- ===================== BENEFACTOR ===================== -->
+  <section id="tab-benefactor" class="tab-panel active">
+    <h2>Your wallet</h2>
+    <p class="hint">
+      This installation of the app has its own local wallet (created automatically,
+      first time you load this page). Fund it with the testnet faucet before creating
+      an allowance: the contract is funded directly from this wallet.
+    </p>
+    <div id="benefactor-wallet" class="wallet-box">Loading…</div>
+    <div class="row">
+      <button id="benefactor-faucet-btn">Request testnet funds</button>
+      <button id="benefactor-sync-btn">Refresh balance</button>
+      <span id="benefactor-faucet-result"></span>
+    </div>
+
+    <h2>Step 1. Choose the allowance terms</h2>
+    <p class="hint">
+      These three values get compiled directly into the contract and <strong>cannot be
+      changed later</strong>. Liquid testnet produces a block roughly once a minute, so
+      "blocks" is the only reliable unit of time a contract can enforce on-chain, so pick a
+      block count that approximates the real-world interval you want.
+    </p>
+    <form id="create-form">
+      <label>
+        Allowance amount per withdrawal
+        <div class="row">
+          <input type="number" id="amount-sats" min="1" step="1" value="5000" required>
+          <span class="unit">sats</span>
+          <span class="hint-inline" id="amount-btc"></span>
+        </div>
+      </label>
+      <label>
+        Minimum wait between withdrawals
+        <div class="row">
+          <input type="number" id="min-distance" min="1" max="65535" step="1" value="10" required>
+          <span class="unit">blocks</span>
+          <span class="hint-inline" id="distance-minutes"></span>
+        </div>
+      </label>
+      <label>
+        Amount to lock into this allowance now
+        <div class="row">
+          <input type="number" id="fund-amount" min="1" step="1" value="20000" required>
+          <span class="unit">sats</span>
+        </div>
+        <span class="hint-inline">Usually a multiple of the allowance amount, so several
+          withdrawal periods are covered before this instance runs out.</span>
+      </label>
+      <label>
+        Beneficiary's public key
+        <input type="text" id="beneficiary-pubkey" placeholder="64 hex characters (BIP340 x-only pubkey)" pattern="[0-9a-fA-F]{64}" required>
+        <span class="hint-inline">
+          The beneficiary gets this from their own copy of this app (see the
+          beneficiary tab's "Your wallet" section) and sends it to you.
+        </span>
+      </label>
+      <button type="submit">Create and fund the contract</button>
+    </form>
+    <p class="hint" id="create-status"></p>
+
+    <div id="create-result" class="result hidden">
+      <h2>Step 2. Give these details to the beneficiary</h2>
+      <p><strong>Contract address:</strong> <code id="out-address"></code></p>
+      <p><strong>Funding transaction:</strong> <code id="out-txid"></code>
+        (<a id="out-txid-link" href="#" target="_blank">view on explorer</a>)</p>
+      <p class="hint">
+        Send the beneficiary the block below (out of band: email, chat, however
+        you'd share any setup info). It contains everything they need to look up the
+        contract themselves and independently verify it matches what you agreed,
+        without trusting this server.
+      </p>
+      <textarea id="handoff-blob" readonly rows="6"></textarea>
+      <button id="copy-handoff">Copy</button>
+    </div>
+  </section>
+
+  <!-- ===================== BENEFICIARY ===================== -->
+  <section id="tab-beneficiary" class="tab-panel">
+    <h2>Your wallet</h2>
+    <p class="hint">
+      This installation of the app has its own local wallet (created automatically).
+      Its public key below is what you send the benefactor when they're setting up
+      your allowance, and it does not reveal your private key.
+    </p>
+    <div id="beneficiary-wallet" class="wallet-box">Loading…</div>
+    <div class="row">
+      <button id="copy-beneficiary-pubkey">Copy public key</button>
+    </div>
+
+    <h2>Step 1. Load the contract</h2>
+    <p class="hint">
+      Paste the block the benefactor sent you, or enter the address and terms manually.
+    </p>
+    <textarea id="load-blob" rows="4" placeholder='Paste the handoff block here, e.g. {"address":"tex1p...","params":{...}}'></textarea>
+    <button id="load-blob-btn">Load</button>
+    <details>
+      <summary>Or enter details manually</summary>
+      <form id="manual-load-form">
+        <label>Contract address <input type="text" id="manual-address" placeholder="tex1p..." required></label>
+        <label>Allowance amount (sats) <input type="number" id="manual-amount" min="1" required></label>
+        <label>Min distance (blocks) <input type="number" id="manual-distance" min="1" max="65535" required></label>
+        <label>Beneficiary public key <input type="text" id="manual-pubkey" pattern="[0-9a-fA-F]{64}" required></label>
+        <button type="submit">Load</button>
+      </form>
+    </details>
+    <p id="beneficiary-key-warning" class="warning hidden"></p>
+
+    <div id="status-section" class="hidden">
+      <h2>Step 2. Current status</h2>
+      <div class="row">
+        <button id="refresh-status">Refresh</button>
+        <span id="status-meta"></span>
+      </div>
+      <div id="instances"></div>
+    </div>
+
+    <div id="claim-result"></div>
+  </section>
+
+  <!-- ===================== ABOUT ===================== -->
+  <section id="tab-about" class="tab-panel">
+    <h2>What this contract actually enforces</h2>
+    <ul>
+      <li>The beneficiary can take up to the allowance amount, no more than once per the
+          minimum block distance, by signing with their own key.</li>
+      <li>Each withdrawal either takes everything remaining (if the balance has dropped to
+          the allowance amount or less) or takes exactly the allowance amount and puts the
+          rest back into a fresh copy of the same contract, resetting its own clock.</li>
+      <li>Sending funds to the contract address a second time creates a
+          <strong>separate, independent</strong> allowance instance, and it does not top up
+          the first one. The two can never be merged.</li>
+      <li>Only explicit (non-confidential) funding outputs work. This app's Fund action
+          always builds an explicit output correctly; a confidential output sent here by
+          some other means would be permanently stuck.</li>
+    </ul>
+    <h2>How the wallet side actually works</h2>
+    <p>
+      This app is driven entirely by <a href="https://github.com/stringhandler/txmanifest-wallet" target="_blank">tx-manifest-wallet</a>,
+      a real, working, generic engine that reads a JSON <em>manifest</em>
+      (<code>examples/allowance/txmanifest.json</code> in this project) describing the
+      contract, and itself handles covenant compilation, UTXO selection, PSET
+      construction, signing, and broadcasting. This app doesn't do any of that itself;
+      it just gives you buttons instead of a command line.
+    </p>
+    <p>
+      Each installation of this app keeps its own local wallet file, used only by that
+      installation. That's why the benefactor and beneficiary each see a "Your wallet"
+      section: a real deployment has each party running their own copy of this app, so
+      no server ever holds more than one party's keys.
+    </p>
+    <h2>Deploying for real (Liquid mainnet)</h2>
+    <p>
+      This demo only ever runs against Liquid testnet. See the project's mainnet notes
+      for what would need to change to deploy for real. In short: real LBTC instead of
+      a faucet, mainnet network parameters and explorer, and re-auditing the contract
+      given real value is at stake.
+    </p>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

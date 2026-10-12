@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Allowance × Humid</title>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --panel: #ffffff;
+    --ink: #1c1b19;
+    --muted: #6b6660;
+    --accent: #1f6f5c;
+    --accent-ink: #ffffff;
+    --warn-bg: #fff4e5;
+    --warn-border: #d98c2b;
+    --border: #ddd8d0;
+    --radius: 10px;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.5; }
+  header { padding: 1.5rem 2rem 1rem; max-width: 900px; margin: 0 auto; }
+  h1 { margin: 0 0 .4rem; font-size: 1.4rem; display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+  .badge { font-size: .65rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    background: #b3251f; color: white; padding: .25rem .5rem; border-radius: 999px; }
+  .tagline { color: var(--muted); margin: 0; font-size: .9rem; }
+  main { max-width: 900px; margin: 0 auto 3rem; padding: 0 2rem; display: flex; flex-direction: column; gap: 1.2rem; }
+  section { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 1.2rem 1.4rem; }
+  section > h2 { margin-top: 0; font-size: 1.05rem; }
+  section > h2 .step { color: var(--accent); }
+  p.hint { color: var(--muted); font-size: .85rem; }
+  label { display: block; font-weight: 600; font-size: .85rem; margin-top: .7rem; }
+  label:first-of-type { margin-top: 0; }
+  input, select, textarea { width: 100%; font: inherit; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .8rem; padding: .45rem .5rem; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; }
+  .row { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-top: .5rem; }
+  .unit { color: var(--muted); font-size: .8rem; }
+  button { font: inherit; background: var(--accent); color: var(--accent-ink); border: none;
+    padding: .55rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: .85rem; }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.small { padding: .35rem .7rem; font-size: .78rem; }
+  pre.out { background: #f1efe9; padding: .7rem; overflow-x: auto; font-size: .72rem;
+    white-space: pre-wrap; word-break: break-all; border-radius: 6px; margin-top: .6rem; max-height: 16rem; overflow-y: auto; }
+  .warn { background: var(--warn-bg); border: 1px solid var(--warn-border); border-left-width: 4px;
+    padding: .7rem 1rem; border-radius: 6px; font-size: .85rem; }
+  .wallet-box { background: #f7f6f3; border: 1px solid var(--border); border-radius: 8px; padding: .7rem 1rem;
+    font-size: .8rem; display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin-top: .6rem; }
+  .wallet-box dt { color: var(--muted); grid-column: 1; }
+  .wallet-box dd { margin: 0; grid-column: 2; word-break: break-all; font-family: ui-monospace, monospace; }
+  .instance-card { border: 1px solid var(--border); border-radius: 8px; padding: .8rem 1rem; margin: .6rem 0;
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .instance-card .meta { font-size: .78rem; color: var(--muted); font-family: ui-monospace, monospace; }
+  .pill { font-size: .68rem; font-weight: 700; text-transform: uppercase; padding: .2rem .55rem; border-radius: 999px; }
+  .pill.ready { background: #dff2e6; color: #1f6f3c; }
+  .pill.waiting { background: #f3e6d0; color: #8a5a10; }
+  .pill.unconfirmed { background: #e7e3fb; color: #4b3a9e; }
+  details { margin-top: .8rem; }
+  summary { cursor: pointer; font-weight: 600; font-size: .85rem; color: var(--accent); }
+  details[open] summary { margin-bottom: .6rem; }
+  a { color: var(--accent); }
+  .hint-inline { color: var(--muted); font-size: .78rem; font-weight: 400; }
+  button.icon { background: transparent; color: var(--muted); border: 1px solid var(--border);
+    padding: .3rem .5rem; font-size: .75rem; }
+  button.icon:hover { color: var(--accent); border-color: var(--accent); }
+  .field-error { color: #b3251f; font-size: .78rem; margin-top: .3rem; display: none; }
+  .field-error.shown { display: block; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(28, 27, 25, .45);
+    display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+  .modal-overlay[hidden] { display: none; }
+  .modal-box { background: var(--panel); border-radius: var(--radius); padding: 1.3rem 1.5rem;
+    max-width: 420px; box-shadow: 0 10px 40px rgba(0,0,0,.2); }
+  .modal-box p { font-size: .9rem; margin: 0 0 1rem; white-space: pre-wrap; }
+  .modal-box .row { justify-content: flex-end; margin-top: 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Allowance contract <span class="badge">Liquid testnet</span></h1>
+  <p class="tagline">
+    Driven entirely by <code>txmanifest.json</code> through a real Humid install.
+    See <code>README.md</code> in this directory for the manifest dialect and the
+    request shapes. Nothing broadcasts unless the "broadcast" box is checked.
+  </p>
+  <button class="icon small" onclick="clearAll()" style="margin-top:.5rem">Forget everything (start over)</button>
+</header>
+
+<main>
+  <section>
+    <h2><span class="step">0</span> · Your wallet</h2>
+    <button onclick="detect()">Check for Humid</button>
+    <span id="detect-status" class="hint" style="margin-left:.5rem"></span>
+
+    <details id="pubkey-details">
+      <summary>Find your spending pubkey (one-time setup)</summary>
+      <p class="hint">
+        Humid has no UI for this yet, but we can use its
+        <code>getWalletDescriptor</code> indirectly to calculate a pubkey that the
+        Humid wallet can use.
+      </p>
+      <button class="small" onclick="getDescriptor()">Call getWalletDescriptor</button>
+      <pre class="out" id="descriptor-out" hidden></pre>
+      <label>Your derived pubkey (64 hex)</label>
+      <div class="row">
+        <input id="my-pubkey" placeholder="64 hex chars" oninput="persist()" style="flex:1">
+        <button class="icon small" onclick="copyField('my-pubkey')">Copy</button>
+      </div>
+    </details>
+  </section>
+
+  <section>
+    <h2><span class="step">1</span> · Fund (benefactor)</h2>
+    <p class="hint">Locks funds from this wallet into a fresh allowance instance.</p>
+    <label>Beneficiary pubkey</label>
+    <div class="row">
+      <input id="fund-beneficiary" placeholder="64 hex chars" oninput="persist()" style="flex:1">
+      <button class="ghost small" onclick="useMyPubkey()">Use mine</button>
+    </div>
+    <div id="fund-beneficiary-error" class="field-error">Must be exactly 64 hex characters.</div>
+    <div class="row">
+      <div style="flex:1">
+        <label>Allowance / withdrawal (sats)</label>
+        <input id="fund-allowance-amount" type="number" value="5000" oninput="persist()">
+      </div>
+      <div style="flex:1">
+        <label>Min distance (blocks) <span class="hint-inline" id="min-distance-hint"></span></label>
+        <input id="fund-min-distance" type="number" value="10" oninput="persist(); updateMinDistanceHint()">
+      </div>
+      <div style="flex:1">
+        <label>Fund now (sats)</label>
+        <input id="fund-amount-sat" type="number" value="20000" oninput="persist()">
+      </div>
+    </div>
+    <p class="hint">
+      Tip: fund with an amount at or below the allowance to exercise
+      <code>FullWithdraw</code> immediately instead of waiting through several
+      <code>PartialWithdraw</code>s first. Liquid blocks are signed once per
+      minute, so the time estimate is reliable.
+    </p>
+    <label class="row" style="font-weight:500"><input id="fund-broadcast" type="checkbox" style="width:auto"> broadcast (leave unchecked for a dry-run first)</label>
+    <button onclick="doFund()">Fund</button>
+    <div id="fund-result"></div>
+    <pre class="out" id="fund-out" hidden></pre>
+  </section>
+
+  <section>
+    <h2><span class="step">2</span> · Status &amp; claim (beneficiary)</h2>
+    <p class="hint">
+      Looks up live instances directly on <code>blockstream.info</code>.
+      Auto-fills with expected covenant address after Fund; paste an
+      address here to check any other instance.
+    </p>
+    <label>Covenant address</label>
+    <div class="row">
+      <input id="covenant-address" placeholder="tex1p..." oninput="persist()" style="flex:1">
+      <button class="icon small" onclick="copyField('covenant-address')">Copy</button>
+    </div>
+    <div class="row">
+      <button onclick="refreshStatus()">Refresh status</button>
+      <span id="status-meta" class="hint"></span>
+    </div>
+    <div id="instances"></div>
+    <div id="claim-result"></div>
+  </section>
+
+  <details>
+    <summary>Advanced: manual withdraw call</summary>
+    <section style="margin-top:.6rem">
+      <p class="hint">Normally filled by clicking "Claim" on an instance above.</p>
+      <div class="row">
+        <div style="flex:1">
+          <label>Funding txid</label>
+          <input id="wd-txid" placeholder="64 hex chars">
+        </div>
+        <div>
+          <label>vout</label>
+          <input id="wd-vout" type="number" value="0" style="width:5rem">
+        </div>
+        <div>
+          <label>Action</label>
+          <select id="wd-action">
+            <option value="PartialWithdraw">PartialWithdraw</option>
+            <option value="FullWithdraw">FullWithdraw</option>
+          </select>
+        </div>
+      </div>
+      <label class="row" style="font-weight:500"><input id="wd-broadcast" type="checkbox" style="width:auto"> broadcast</label>
+      <button onclick="doWithdraw()">Call withdraw</button>
+      <pre class="out" id="wd-out" hidden></pre>
+    </section>
+  </details>
+</main>
+
+<div class="modal-overlay" id="confirm-modal" hidden>
+  <div class="modal-box">
+    <p id="confirm-modal-message"></p>
+    <div class="row">
+      <button class="ghost" id="confirm-modal-cancel">Dry-run only</button>
+      <button id="confirm-modal-ok">Broadcast for real</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// Same libraries that Humid itself depends on for this exact kind of work, pinned
+// where its own package.json pins them (@noble/curves 1.9.7, @noble/hashes 1.8.0),
+// rather than a hand-rolled implementation. Module script, for the import
+// statements, so onclick handlers are
+// wired up explicitly at the bottom since top-level functions in a module aren't
+// implicitly global the way they are in a classic script.
+// The plain npm-root file path (e.g. ".../secp256k1.js") serves the package's raw
+// CommonJS build ("exports.secp256k1 = ..."), which a <script type="module"> cannot
+// `import` at all, and the failure takes down every button on the page rather than
+// just this one, because the whole module fails to load. jsdelivr's "/+esm" suffix
+// serves an actual ESM-converted bundle; checked the real export names in each
+// before using them, not just the URL's HTTP status.
+import { secp256k1 } from "https://cdn.jsdelivr.net/npm/@noble/curves@1.9.7/secp256k1.js/+esm";
+// Import path confirmed from Humid's own source
+// (core/chains/liquid/domain/identity/deriveSlipIdentityPath.ts imports sha256 from
+// exactly "@noble/hashes/sha2.js" at this same pinned version) rather than guessed.
+import { sha256 } from "https://cdn.jsdelivr.net/npm/@noble/hashes@1.8.0/sha2.js/+esm";
+import { base58check } from "https://cdn.jsdelivr.net/npm/@scure/base@1.1.1/+esm";
+
+// ---------- persistence: remember what we've already learned, across reloads ----------
+const PERSIST_KEYS = ["my-pubkey", "fund-beneficiary", "fund-allowance-amount",
+  "fund-min-distance", "fund-amount-sat", "covenant-address"];
+const STORE_KEY = "allowance-humid-demo";
+
+function persist() {
+  const values = {};
+  for (const id of PERSIST_KEYS) values[id] = document.getElementById(id).value;
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(values)); } catch {}
+}
+
+function restore() {
+  try {
+    const values = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+    for (const id of PERSIST_KEYS) {
+      if (values[id]) document.getElementById(id).value = values[id];
+    }
+  } catch {}
+}
+
+function useMyPubkey() {
+  const mine = document.getElementById("my-pubkey").value.trim();
+  if (!mine) { alert("Save your derived pubkey above first."); return; }
+  document.getElementById("fund-beneficiary").value = mine;
+  persist();
+}
+
+function clearAll() {
+  if (!confirm("Clear all saved values and outputs (pubkey, contract params, covenant address, raw call results) and start over?")) return;
+  try { localStorage.removeItem(STORE_KEY); } catch {}
+  for (const id of PERSIST_KEYS) document.getElementById(id).value = "";
+  document.getElementById("fund-allowance-amount").value = "5000";
+  document.getElementById("fund-min-distance").value = "10";
+  document.getElementById("fund-amount-sat").value = "20000";
+  document.getElementById("instances").innerHTML = "";
+  document.getElementById("status-meta").textContent = "";
+  document.getElementById("fund-result").innerHTML = "";
+  document.getElementById("claim-result").innerHTML = "";
+  document.getElementById("fund-beneficiary-error").classList.remove("shown");
+  // Generalized rather than naming descriptor-out specifically, since every raw-output
+  // panel (descriptor-out, fund-out, wd-out) has the same "stale after Forget
+  // Everything" gap, not just the one that happened to get noticed first.
+  for (const el of document.querySelectorAll("pre.out")) {
+    el.textContent = "";
+    el.hidden = true;
+  }
+  stopStatusPolling();
+  updateMinDistanceHint();
+}
+
+async function copyField(id) {
+  const el = document.getElementById(id);
+  if (!el.value) return;
+  try {
+    await navigator.clipboard.writeText(el.value);
+  } catch (err) {
+    console.warn("clipboard write failed", err);
+    el.select();
+  }
+}
+
+// Liquid's block interval comes from scheduled signers, not proof-of-work search,
+// the variance is extraordinarily low, so treating ~1 block/min as a reliable clock
+// (not just a rough PoW-chain-style guess) is accurate here.
+function updateMinDistanceHint() {
+  const blocks = Number(document.getElementById("fund-min-distance").value || 0);
+  document.getElementById("min-distance-hint").textContent = `≈ ${blocks} min`;
+}
+
+// ---------- manifest/contract loading. no-store: this file gets edited while
+// iterating against a real Humid install, and a stale cached copy silently
+// reintroducing an already-fixed error wasted a full round trip once already ----------
+async function loadSimf() {
+  const res = await fetch("./allowance.simf", { cache: "no-store" });
+  return res.text();
+}
+async function loadManifest() {
+  const res = await fetch("./txmanifest.json", { cache: "no-store" });
+  return res.json();
+}
+
+function out(id, value) {
+  const el = document.getElementById(id);
+  el.hidden = false;
+  el.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+}
+
+function detect() {
+  const el = document.getElementById("detect-status");
+  if (window.humid && typeof window.humid.request === "function") {
+    el.textContent = "✓ window.humid found.";
+  } else {
+    el.textContent = "✗ not found. Check the extension is enabled, a wallet is set " +
+      "up, and this page was reloaded after enabling it.";
+  }
+}
+
+// Plain injected provider only exposes 6 CAIP-25/27 session-management methods
+// (apps/extension/src/core/extension-background/injected-rpc/index.ts). Chain
+// methods (processConfidentialTransaction, getWalletDescriptor) must go through
+// wallet_invokeMethod inside a session from wallet_createSession. Scope id from
+// apps/extension/src/core/chains/liquid/domain/LiquidChain.ts's LIQUID_TESTNET_CHAIN_ID.
+const LIQUID_TESTNET_SCOPE = "bip122:a771da8e52ee6ad581ed1e9a99825e5b";
+let cachedSessionId;
+
+async function ensureSession(methods) {
+  const session = await window.humid.request({
+    method: "wallet_createSession",
+    params: { requiredScopes: { [LIQUID_TESTNET_SCOPE]: { methods, notifications: [] } } },
+  });
+  console.log("wallet_createSession response:", session);
+  cachedSessionId = session?.sessionId;
+  return session;
+}
+
+async function invokeHumid(method, params) {
+  await ensureSession([method]);
+  const request = {
+    method: "wallet_invokeMethod",
+    params: {
+      scope: LIQUID_TESTNET_SCOPE,
+      ...(cachedSessionId ? { sessionId: cachedSessionId } : {}),
+      request: { method, params },
+    },
+  };
+  console.log("wallet_invokeMethod request:", request);
+  const response = await window.humid.request(request);
+  console.log("wallet_invokeMethod response:", response);
+  return response;
+}
+
+// ---------- client-side BIP32 derivation ----------
+// The same CKDpub derivation the README describes, using @noble rather than a
+// hand-rolled implementation of the curve maths.
+// The raw descriptor stays visible below the derived key specifically so this is
+// checkable, not just trusted: for an already-set-up wallet, the derived value
+// should reproduce whatever pubkey you derived and saved by hand before.
+function bytesToHex(bytes) {
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function beBytesToBigInt(bytes) {
+  let n = 0n;
+  for (const b of bytes) n = (n << 8n) | BigInt(b);
+  return n;
+}
+
+async function hmacSha512(keyBytes, dataBytes) {
+  const key = await crypto.subtle.importKey(
+    "raw", keyBytes, { name: "HMAC", hash: "SHA-512" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", key, dataBytes));
+}
+
+async function ckdPub(pubkeyBytes, chaincodeBytes, index) {
+  const data = new Uint8Array(37);
+  data.set(pubkeyBytes, 0);
+  new DataView(data.buffer).setUint32(33, index, false);
+  const I = await hmacSha512(chaincodeBytes, data);
+  const IL = I.slice(0, 32), IR = I.slice(32, 64);
+  const ilPoint = secp256k1.ProjectivePoint.BASE.multiply(beBytesToBigInt(IL));
+  const parentPoint = secp256k1.ProjectivePoint.fromHex(bytesToHex(pubkeyBytes));
+  const childPoint = ilPoint.add(parentPoint);
+  return { pubkey: childPoint.toRawBytes(true), chaincode: IR };
+}
+
+// xpub is already at m/84'/1'/0' (per the descriptor's own [fingerprint/84h/1h/0h]
+// origin), then two more non-hardened steps, external chain (0) then first index (0).
+async function derivePubkeyFromDescriptor(descriptorResult) {
+  const entries = descriptorResult?.descriptors?.[0]?.branchDescriptors || [];
+  const external = entries.find((e) => e.branch === "external");
+  if (!external) throw new Error("no external branch descriptor in the response");
+  const match = /\]([tx]pub[1-9A-HJ-NP-Za-km-z]+)\//.exec(external.descriptor);
+  if (!match) throw new Error("could not find an xpub inside the descriptor string");
+
+  const raw = base58check(sha256).decode(match[1]);
+  if (raw.length !== 78) throw new Error(`decoded xpub is ${raw.length} bytes, expected 78`);
+  const chaincode = raw.slice(13, 45);
+  const pubkey = raw.slice(45, 78);
+
+  const step1 = await ckdPub(pubkey, chaincode, 0);
+  const step2 = await ckdPub(step1.pubkey, step1.chaincode, 0);
+  return bytesToHex(step2.pubkey.slice(1)); // drop the parity byte -> x-only, 32 bytes
+}
+
+async function getDescriptor() {
+  out("descriptor-out", "Calling...");
+  try {
+    const result = await invokeHumid("getWalletDescriptor", {
+      descriptorType: "publicWalletDescriptor",
+      descriptorFormat: [{ format: "bip380-split-branches" }],
+    });
+    out("descriptor-out", result);
+    try {
+      const pubkey = await derivePubkeyFromDescriptor(result);
+      document.getElementById("my-pubkey").value = pubkey;
+      persist();
+    } catch (deriveErr) {
+      console.warn("pubkey derivation failed, descriptor still shown above raw", deriveErr);
+      out("descriptor-out", JSON.stringify(result, null, 2) +
+        "\n\n(auto-derivation failed: " + (deriveErr?.message || deriveErr) +
+        " (the raw descriptor above is still real; this step can be done by hand)");
+    }
+  } catch (err) {
+    out("descriptor-out", "ERROR: " + (err?.message || err));
+  }
+}
+
+async function callAction(action, params, broadcast) {
+  const manifest = await loadManifest();
+  const source = await loadSimf();
+  return invokeHumid("processConfidentialTransaction", {
+    manifest, contractSources: { "./allowance.simf": source }, action, params, broadcast,
+  });
+}
+
+const HEX64 = /^[0-9a-f]{64}$/i;
+
+async function doFund() {
+  const beneficiary = document.getElementById("fund-beneficiary").value.trim();
+  const beneficiaryError = document.getElementById("fund-beneficiary-error");
+  if (!HEX64.test(beneficiary)) {
+    beneficiaryError.textContent = beneficiary
+      ? "Must be exactly 64 hex characters."
+      : "Required: paste the beneficiary's pubkey, or click \"Use mine\" above.";
+    beneficiaryError.classList.add("shown");
+    return;
+  }
+  beneficiaryError.classList.remove("shown");
+
+  const resultBox = document.getElementById("fund-result");
+  resultBox.innerHTML = "";
+  out("fund-out", "Calling...");
+  try {
+    const allowanceAmount = document.getElementById("fund-allowance-amount").value;
+    const minDistance = document.getElementById("fund-min-distance").value;
+    const fundAmount = document.getElementById("fund-amount-sat").value;
+    const broadcast = document.getElementById("fund-broadcast").checked;
+    const result = await callAction("Fund", {
+      BENEFICIARY_KEY: beneficiary,
+      ALLOWANCE_AMOUNT: allowanceAmount,
+      MIN_DISTANCE: minDistance,
+      amount_sat: fundAmount,
+    }, broadcast);
+    out("fund-out", result);
+    // A dry-run's txid is only what the tx *would* hash to if broadcast, not
+    // actually on-chain, so it must not be a clickable explorer link (would just
+    // 404 and look like something broke).
+    resultBox.innerHTML = result?.txid
+      ? `<p class="hint">✓ ${broadcast ? "Broadcast" : "Dry-run signed (not sent)"}: ` +
+        `${Number(fundAmount).toLocaleString()} sats, fee ${result.feeSats ?? "?"} sats. ` +
+        (broadcast
+          ? `<a href="https://blockstream.info/liquidtestnet/tx/${result.txid}" target="_blank">${result.txid}</a></p>`
+          : `<code>${result.txid}</code></p>`)
+      : "";
+    if (result?.txid && broadcast) {
+      // A dry-run's txid never reaches Esplora at all (nothing was sent), only
+      // chase it down for a real broadcast. Even then, a just-broadcast tx isn't
+      // always visible to Esplora's /tx lookup instantly (mempool propagation lag,
+      // not an error), so retry a few times before giving up.
+      const meta = document.getElementById("status-meta");
+      let address = null;
+      for (let attempt = 1; attempt <= 6 && !address; attempt += 1) {
+        meta.textContent = `Deriving covenant address from the fund tx (attempt ${attempt}/6)...`;
+        address = await deriveCovenantAddress(result.txid).catch((err) => {
+          console.warn(`covenant address lookup attempt ${attempt} failed`, err);
+          return null;
+        });
+        if (!address && attempt < 6) await new Promise((r) => setTimeout(r, 3000));
+      }
+      if (address) {
+        document.getElementById("covenant-address").value = address;
+        persist();
+        refreshStatus();
+      } else {
+        meta.textContent =
+          "Fund tx still not visible to Esplora after several tries. Click Refresh status once it confirms, or paste the address manually.";
+      }
+    }
+  } catch (err) {
+    out("fund-out", "ERROR: " + (err?.message || err));
+  }
+}
+
+// ---------- indexer: Humid has none, so this page is one (see main project log) ----------
+const ESPLORA = "https://blockstream.info/liquidtestnet/api";
+
+async function deriveCovenantAddress(fundTxid) {
+  const res = await fetch(`${ESPLORA}/tx/${fundTxid}`);
+  if (!res.ok) throw new Error(`tx not found yet (${res.status})`);
+  const tx = await res.json();
+  return tx.vout[0]?.scriptpubkey_address;
+}
+
+// Auto-refreshes while anything is unconfirmed or waiting, so the Claim button
+// just appears on its own rather than needing repeated manual clicks, and stops
+// itself once nothing left benefits from another check, so it doesn't poll Esplora
+// forever in the background.
+let statusPollHandle = null;
+
+function stopStatusPolling() {
+  if (statusPollHandle) { clearInterval(statusPollHandle); statusPollHandle = null; }
+}
+
+// Two overlapping-call hazards, each of which can produce an RBF-style "same
+// feerate" rejection once the node has accepted an earlier attempt spending the
+// same UTXO into its mempool. (1) A second refreshStatus() firing, from a manual
+// click racing the 20s auto-poll, while a UTXO's real on-chain state hasn't
+// caught up yet, can rebuild the instance list with a fresh, clickable Claim button
+// for something already mid-claim; (2) nothing stopped that button from actually
+// being clicked twice. Both guarded below rather than just the one that happened to
+// surface first.
+let statusRefreshing = false;
+const claimsInFlight = new Set();
+
+async function refreshStatus() {
+  if (statusRefreshing) return;
+  statusRefreshing = true;
+  try {
+    await refreshStatusInner();
+  } finally {
+    statusRefreshing = false;
+  }
+}
+
+async function refreshStatusInner() {
+  const address = document.getElementById("covenant-address").value.trim();
+  const allowanceAmount = Number(document.getElementById("fund-allowance-amount").value);
+  const minDistance = Number(document.getElementById("fund-min-distance").value);
+  const container = document.getElementById("instances");
+  const meta = document.getElementById("status-meta");
+  if (!address) { meta.textContent = "No covenant address yet. Fund first, or paste one."; return; }
+  meta.textContent = "Loading...";
+  container.innerHTML = "";
+  let anyPending = false;
+  try {
+    const [utxosRes, tipRes] = await Promise.all([
+      fetch(`${ESPLORA}/address/${address}/utxo`),
+      fetch(`${ESPLORA}/blocks/tip/height`),
+    ]);
+    if (!utxosRes.ok) throw new Error(`utxo lookup failed (${utxosRes.status})`);
+    const utxos = await utxosRes.json();
+    const tip = Number(await tipRes.text());
+    meta.textContent = `Tip height ${tip}`;
+
+    if (utxos.length === 0) {
+      container.textContent = "No funds at this address yet (or the funding tx hasn't confirmed).";
+      anyPending = true; // keep polling, since the funding tx itself may still be landing
+    }
+
+    for (const u of utxos) {
+      const confirmed = !!u.status.confirmed;
+      // ~1 block/min, and Liquid's blocks come from scheduled signers rather than
+      // proof-of-work search, so this is a genuinely reliable clock, not a rough
+      // PoW-style guess, which is why minutes are the primary unit here.
+      const blocksSince = confirmed ? tip - u.status.block_height : 0;
+      const minutesLeft = Math.max(0, minDistance - blocksSince);
+      const withdrawableNow = confirmed && blocksSince >= minDistance;
+      const isFull = u.value <= allowanceAmount;
+      const action = isFull ? "FullWithdraw" : "PartialWithdraw";
+      // Also keep polling if this one's mid-claim, since the list needs to eventually
+      // refresh and drop it once the spend lands, not just while it's waiting out
+      // its timelock.
+      if (!withdrawableNow || claimsInFlight.has(`${u.txid}:${u.vout}`)) anyPending = true;
+
+      const card = document.createElement("div");
+      card.className = "instance-card";
+      let pillClass = "waiting", pillText = `ready in ~${minutesLeft} min`;
+      if (!confirmed) { pillClass = "unconfirmed"; pillText = "unconfirmed"; }
+      else if (withdrawableNow) { pillClass = "ready"; pillText = "ready"; }
+
+      const left = document.createElement("div");
+      left.innerHTML = `<div><strong>${u.value.toLocaleString()} sats</strong>: ${isFull ? "final withdrawal" : "partial, leaves a continuation"}</div>
+        <div class="meta">${u.txid.slice(0, 12)}...:${u.vout} ${confirmed ? `· ${blocksSince}/${minDistance} blocks elapsed` : ""}</div>`;
+
+      const right = document.createElement("div");
+      const pill = document.createElement("span");
+      pill.className = "pill " + pillClass;
+      pill.textContent = pillText;
+      right.appendChild(pill);
+      if (withdrawableNow) {
+        const key = `${u.txid}:${u.vout}`;
+        const btn = document.createElement("button");
+        btn.className = "small";
+        btn.style.marginLeft = ".6rem";
+        if (claimsInFlight.has(key)) {
+          btn.textContent = "Claiming...";
+          btn.disabled = true;
+        } else if (claimsInFlight.size > 0) {
+          // A different instance is mid-claim, so disabled too, not just the one
+          // actually in flight, since only one claim may be active at a time.
+          btn.textContent = `Claim (${action})`;
+          btn.disabled = true;
+        } else {
+          btn.textContent = `Claim (${action})`;
+          btn.onclick = () => claimInstance(u.txid, u.vout, action, btn);
+        }
+        right.appendChild(btn);
+      }
+      card.appendChild(left);
+      card.appendChild(right);
+      container.appendChild(card);
+    }
+  } catch (err) {
+    meta.textContent = "ERROR: " + (err?.message || err);
+    anyPending = true; // could be transient, so keep trying rather than go silent
+  }
+
+  stopStatusPolling();
+  if (anyPending) statusPollHandle = setInterval(refreshStatus, 20000);
+}
+
+// Found the real cause of a single click producing two submissions: the previous
+// version of this function called addEventListener fresh on every invocation,
+// on the same persistent modal buttons, and only removed *its own* listener when
+// its own promise resolved. If a second confirmBroadcast() ever started before the
+// first one's modal was dismissed (two different instances' Claim buttons clicked
+// in quick succession, which the per-UTXO lock alone doesn't prevent), both
+// listeners end up registered at once and a single click fires both, with
+// doWithdraw() then reading its target from shared form fields rather than a
+// per-call argument, so both resulting builds could submit the same instance.
+// Fixed at the mechanism, not just by narrowing the window further: the listeners
+// are registered exactly once, ever, and route to whichever resolve function is
+// currently pending, and there is structurally only ever one to route to.
+let pendingConfirmResolve = null;
+
+document.getElementById("confirm-modal-ok").addEventListener("click", () => {
+  const resolve = pendingConfirmResolve;
+  pendingConfirmResolve = null;
+  document.getElementById("confirm-modal").hidden = true;
+  resolve?.(true);
+});
+document.getElementById("confirm-modal-cancel").addEventListener("click", () => {
+  const resolve = pendingConfirmResolve;
+  pendingConfirmResolve = null;
+  document.getElementById("confirm-modal").hidden = true;
+  resolve?.(false);
+});
+
+function confirmBroadcast(message) {
+  return new Promise((resolve) => {
+    document.getElementById("confirm-modal-message").textContent = message;
+    document.getElementById("confirm-modal").hidden = false;
+    pendingConfirmResolve = resolve;
+  });
+}
+
+async function claimInstance(txid, vout, action, btn) {
+  const key = `${txid}:${vout}`;
+  // Per-UTXO lock (from before) plus a page-wide one: there is exactly one shared
+  // confirm modal, so at most one claim may be in its confirm-or-build phase at a
+  // time, full stop, not just the same instance. This is what actually prevents
+  // the scenario that caused the listener issue above, rather than only handling
+  // it gracefully if it happens.
+  if (claimsInFlight.size > 0) {
+    alert("A claim is already in progress. Wait for it to finish first.");
+    return;
+  }
+  claimsInFlight.add(key);
+  if (btn) { btn.disabled = true; btn.textContent = "Claiming..."; }
+  refreshStatus(); // repaint so every other Claim button disables immediately too
+  try {
+    document.getElementById("wd-txid").value = txid;
+    document.getElementById("wd-vout").value = vout;
+    document.getElementById("wd-action").value = action;
+    const broadcast = await confirmBroadcast(
+      `Claim ${action} on ${txid.slice(0, 12)}...:${vout}?`);
+    document.getElementById("wd-broadcast").checked = broadcast;
+    await doWithdraw();
+  } finally {
+    // Covers every exit path (success, error, or a dry-run that never actually
+    // spent anything), the lock is released and a fresh status check can show
+    // this instance's real, current state either way.
+    claimsInFlight.delete(key);
+  }
+}
+
+async function doWithdraw() {
+  const resultEl = document.getElementById("claim-result");
+  resultEl.textContent = "Calling...";
+  try {
+    const action = document.getElementById("wd-action").value;
+    const beneficiary = document.getElementById("fund-beneficiary").value.trim();
+    const allowanceAmount = document.getElementById("fund-allowance-amount").value;
+    const minDistance = document.getElementById("fund-min-distance").value;
+    const result = await invokeHumid("processConfidentialTransaction", {
+      manifest: await loadManifest(),
+      contractSources: { "./allowance.simf": await loadSimf() },
+      action,
+      params: {},
+      // instance is double-nested on purpose, since normaliseInstance() reads
+      // raw.instance.fields, not raw.fields. See README for the trace.
+      instance: { instance: { fields: {
+        BENEFICIARY_KEY: beneficiary, ALLOWANCE_AMOUNT: allowanceAmount, MIN_DISTANCE: minDistance,
+      } } },
+      state: { utxos: [{
+        txid: document.getElementById("wd-txid").value.trim(),
+        vout: Number(document.getElementById("wd-vout").value),
+        utxo_type: "allowance",
+      }] },
+      broadcast: document.getElementById("wd-broadcast").checked,
+    });
+    out("wd-out", result);
+    resultEl.innerHTML = result?.txid
+      ? `<strong>${action} broadcast.</strong> <a href="https://blockstream.info/liquidtestnet/tx/${result.txid}" target="_blank">${result.txid}</a>`
+      : "Dry-run complete (see Advanced panel for full response).";
+    refreshStatus();
+  } catch (err) {
+    const msg = "ERROR: " + (err?.message || err);
+    out("wd-out", msg);
+    resultEl.textContent = msg;
+  }
+}
+
+// Module-scoped functions aren't implicitly global the way a classic script's
+// are, since the HTML's inline onclick="..." attributes need these on window explicitly.
+Object.assign(window, {
+  detect, getDescriptor, useMyPubkey, doFund, refreshStatus, doWithdraw, persist,
+  clearAll, copyField,
+});
+
+restore();
+updateMinDistanceHint();
+detect();
+</script>
+</body>
+</html>

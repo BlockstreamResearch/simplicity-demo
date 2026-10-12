@@ -1,0 +1,400 @@
+Two fixes Humid needs to run the allowance covenant end to end
+
+Both bugs are filed upstream and unfixed as of 2026-10-07. Apply this from the root of
+a Humid checkout and rebuild:
+
+    git apply /path/to/humid-allowance-fixes.patch
+    bun run build        # then reload the extension at chrome://extensions
+
+Applies to:  https://github.com/BlockstreamResearch/humid
+Verified against both `7dc8535` ("Dev (#19)") and `cb1b71c` ("release: 1.1.2"), which
+are byte-identical in all five files touched here.
+
+Check whether either fix has landed upstream before applying. If both have, you do not
+need this file. The quickest test: grep for the two refusal strings quoted below. If
+`git apply` rejects this against a newer Humid, the two changes are described well enough
+below to redo by hand.
+
+If it fails with "packages/tx-manifest/src/evaluation/inputRules.test.ts: already exists
+in working directory", you already have that file from a previous run of this patch, and
+`git stash` does not stash untracked files. Delete it and apply again, or skip it with
+`git apply --exclude='*inputRules.test.ts'` (it only adds tests for the new function; the
+fixes work without it).
+
+--- 1. Relative timelocks were refused outright -------------------------------
+
+Symptom: every PartialWithdraw and FullWithdraw fails with
+
+    Input allowance_in asks for a relative timelock, and this wallet sets one
+    sequence for the whole transaction — which would time-lock the outputs
+    funding it as well, against their own age rather than this input's.
+    { "reject": "unimplemented-construct", "reason": "invalid_manifest_request" }
+
+The stated rationale is real in general: one shared nSequence would wrongly time-lock
+a separate fee-paying input against its own confirmation age, and the underlying smplx
+wasm builder genuinely offers no per-input sequence, but `transactionSequence()` fired
+whenever any input declared a relative timelock, without inspecting how many inputs the
+transaction actually has. This contract permits exactly one
+(`enforce_single_input()`), so the refusal never applied to it.
+
+Fix: `relativeTimelockPlacement()` in `evaluation/inputRules.ts` refuses only when some
+*other* input would really inherit the wait, and `reviewManifestAction()` calls it after
+`placeInputs()`, where the real placement is known.
+
+--- 2. An action whose only output is change was refused as "pays nothing" ----
+
+Symptom: FullWithdraw fails on an instance with real balance remaining, with
+
+    "FullWithdraw" pays nothing, so there is nothing to build.
+
+A policy-asset "change" output is deliberately left out of `review.outputs`, because
+the builder's own `addChange()` computes its value instead. FullWithdraw's only output
+is such an output, so `review.outputs` came out empty and
+`assembleReviewedTransaction()` refused before `addChange()`, which would have paid
+the beneficiary correctly, ever ran. PartialWithdraw is unaffected only because it has
+a second, explicit output that keeps the list non-empty.
+
+Fix: the review records `changeDeferred` when it leaves a policy-asset change output
+for the builder, and the refusal now fires only when the outputs are empty *and* no
+change was deferred. The optional field keeps every existing ManifestReview literal,
+tests included, type-checking unchanged. Deliberately not fixed by computing a real
+surplus in the review: that would risk both the review and `addChange()` adding an
+output for the same value.
+
+Test changes are included so `bun test` stays green: two existing tests asserted the
+old unconditional timelock refusal.
+
+Both fixes verified end to end against a patched build on 2026-10-07: Fund,
+PartialWithdraw and FullWithdraw all built, signed and broadcast on Liquid testnet.
+
+diff --git a/apps/extension/src/core/chains/liquid/adapters/smplx/assembleReviewedTransaction.ts b/apps/extension/src/core/chains/liquid/adapters/smplx/assembleReviewedTransaction.ts
+index 366fa00..e52b69e 100644
+--- a/apps/extension/src/core/chains/liquid/adapters/smplx/assembleReviewedTransaction.ts
++++ b/apps/extension/src/core/chains/liquid/adapters/smplx/assembleReviewedTransaction.ts
+@@ -87,7 +87,12 @@ export async function assembleReviewedTransaction(
+ 		};
+ 	}
+ 
+-	if (review.outputs.length === 0) {
++	// An empty `outputs` is only a document fault when nothing will be paid at all.
++	// A policy-asset "change" output is deliberately absent from `review.outputs` —
++	// its value is computed by `builder.addChange()` further down — so an action whose
++	// only output is change (e.g. a full withdrawal that sends the whole remaining
++	// balance to the beneficiary) pays perfectly well and must not be refused here.
++	if (review.outputs.length === 0 && !review.changeDeferred) {
+ 		return {
+ 			ok: false,
+ 			reason: `"${review.action}" pays nothing, so there is nothing to build.`,
+diff --git a/packages/tx-manifest/src/evaluation/inputRules.ts b/packages/tx-manifest/src/evaluation/inputRules.ts
+index 7d3db45..b08d4e3 100644
+--- a/packages/tx-manifest/src/evaluation/inputRules.ts
++++ b/packages/tx-manifest/src/evaluation/inputRules.ts
+@@ -155,15 +155,40 @@ export function transactionSequence(rules: InputRule[]): TransactionSequenceResu
+ 		};
+ 	}
+ 
+-	if (first.sequence < SEQUENCE_TIMELOCK_DISABLED_FROM) {
+-		return {
+-			ok: false,
+-			reason:
+-				`Input ${first.id} asks for a relative timelock, and this wallet sets one sequence for ` +
+-				"the whole transaction — which would time-lock the outputs funding it as well, against " +
+-				"their own age rather than this input's.",
+-		};
++	return { ok: true, value: first.sequence };
++}
++
++export type PlacedInputOrigin = { declaredBy?: string };
++
++export function relativeTimelockPlacement(
++	sequence: number | undefined,
++	rules: InputRule[],
++	placed: PlacedInputOrigin[],
++): { ok: false; reason: string } | { ok: true } {
++	if (sequence === undefined || sequence >= SEQUENCE_TIMELOCK_DISABLED_FROM) {
++		return { ok: true };
+ 	}
+ 
+-	return { ok: true, value: first.sequence };
++	const asking = rules.filter((rule) => rule.sequence === sequence);
++	const asked = new Set(asking.map((rule) => rule.id));
++	const inheriting = placed.filter(
++		(origin) => origin.declaredBy === undefined || !asked.has(origin.declaredBy),
++	);
++
++	if (inheriting.length === 0) {
++		return { ok: true };
++	}
++
++	const named = asking[0]?.id ?? "(unnamed)";
++	const one = inheriting.length === 1;
++
++	return {
++		ok: false,
++		reason:
++			`Input ${named} asks for a relative timelock (sequence ${sequence}), and this wallet sets ` +
++			`one sequence for the whole transaction. ${inheriting.length} other input` +
++			`${one ? "" : "s"} would inherit that wait, measured against ${one ? "its" : "their"} own ` +
++			`age rather than ${named}'s, so nothing would relay the transaction until every one ` +
++			"of them is that old as well.",
++	};
+ }
+diff --git a/packages/tx-manifest/src/review/covenantSpend.test.ts b/packages/tx-manifest/src/review/covenantSpend.test.ts
+index 9e3f6c5..eb6a72d 100644
+--- a/packages/tx-manifest/src/review/covenantSpend.test.ts
++++ b/packages/tx-manifest/src/review/covenantSpend.test.ts
+@@ -221,6 +221,42 @@ describe("the transaction-level facts a covenant spend needs", () => {
+ 	test("carries none where the action declares none", async () => {
+ 		expect((await reviewed()).sequence).toBeUndefined();
+ 	});
++
++	test("carries a relative timelock where the covenant input is the only input", async () => {
++		const inputs = receiveInputs();
++
++		inputs[0] = { ...inputs[0], sequence: { relative_blocks: 10 } };
++
++		const outputs = [
++			{
++				amount_sat: 40_000,
++				asset: "lbtc",
++				description: "The reclaimed funds, sent to your wallet.",
++				destination: "wallet",
++				id: "received_out",
++			},
++		];
++		const review = await reviewed(spendRequest(withReceive([inputs[0]], outputs)));
++
++		expect(review.sequence).toBe(10);
++		expect(review.selected).toHaveLength(0);
++		expect(review.inputOrder).toHaveLength(1);
++	});
++
++	test("refuses a relative timelock a wallet fee input would inherit", async () => {
++		const inputs = receiveInputs();
++
++		inputs[0] = { ...inputs[0], sequence: { relative_blocks: 10 } };
++
++		const result = await reviewManifestAction(spendRequest(withReceiveInputs(inputs)), deps);
++
++		expect(isRefusal(result)).toBe(true);
++
++		if (isRefusal(result)) {
++			expect(result.reject).toBe("unimplemented-construct");
++			expect(result.reason).toContain("would inherit that wait");
++		}
++	});
+ });
+ 
+ describe("a covenant input that issues an asset", () => {
+diff --git a/packages/tx-manifest/src/review/index.ts b/packages/tx-manifest/src/review/index.ts
+index dea5525..6710a1a 100644
+--- a/packages/tx-manifest/src/review/index.ts
++++ b/packages/tx-manifest/src/review/index.ts
+@@ -42,7 +42,11 @@ import {
+ 	withHookValues,
+ } from "../evaluation/hooks";
+ import { type PlaceableInput, placeInputs } from "../evaluation/inputOrder";
+-import { resolveInputRules, transactionSequence } from "../evaluation/inputRules";
++import {
++	relativeTimelockPlacement,
++	resolveInputRules,
++	transactionSequence,
++} from "../evaluation/inputRules";
+ import {
+ 	declaredIssuance,
+ 	issuanceAttributes,
+@@ -101,6 +105,13 @@ export type AssetMovement = {
+ export type ManifestReview = {
+ 	action: string;
+ 	changeBlinded: boolean;
++	/**
++	 * The action declares a policy-asset "change" output whose value this review did not
++	 * compute, because the builder's own `addChange()` computes it instead. Such an
++	 * output is absent from `outputs`, so an empty `outputs` does not mean the action
++	 * pays nobody.
++	 */
++	changeDeferred?: boolean;
+ 	changeBlindedBy?: BlindingWord;
+ 	changeOverrode?: BlindingWord;
+ 	boundTo?: string;
+@@ -624,6 +635,10 @@ export async function reviewManifestAction(
+ 	const outputAt = new Map<string, number>();
+ 	const returned = new Map<string, bigint>();
+ 	const changePaid = new Set<string>();
++	// Set when a policy-asset "change" output is left out of `outputs` below for the
++	// builder's `addChange()` to handle. Without this, an action whose only output is
++	// such a change output looks like an action with no outputs at all.
++	let changeDeferred = false;
+ 
+ 	for (const [at, planned] of plan.plan.outputs.entries()) {
+ 		const asset = ledger.outputs[at] ?? policyAsset;
+@@ -635,6 +650,10 @@ export async function reviewManifestAction(
+ 					: (fundedFor.get(asset)?.changeSats ?? 0n);
+ 
+ 			if (surplus <= 0n) {
++				if (asset === policyAsset) {
++					changeDeferred = true;
++				}
++
+ 				continue;
+ 			}
+ 
+@@ -748,6 +767,19 @@ export async function reviewManifestAction(
+ 	}
+ 
+ 	const placement = placeInputs(placeable);
++
++	const carried = relativeTimelockPlacement(
++		sequence.value,
++		inputRules.rules,
++		placement.order.map((planned) =>
++			planned.source === "covenant" ? { declaredBy: planned.covenant.id } : {},
++		),
++	);
++
++	if (!carried.ok) {
++		return { reason: carried.reason, refused: true, reject: "unimplemented-construct" };
++	}
++
+ 	const landedAt = (id: string): number | undefined => {
+ 		const own = placement.at.get(id);
+ 
+@@ -861,6 +893,7 @@ export async function reviewManifestAction(
+ 		action: request.action,
+ 		...(action.boundTo === undefined ? {} : { boundTo: action.boundTo }),
+ 		changeBlinded: change.blinding === "blinded",
++		...(changeDeferred ? { changeDeferred: true } : {}),
+ 		...(change.blinding === "blinded"
+ 			? { changeBlindedBy: change.decidedBy }
+ 			: change.overrode === undefined
+diff --git a/packages/tx-manifest/src/review/semantics.test.ts b/packages/tx-manifest/src/review/semantics.test.ts
+index d50d1f1..3ae4d0e 100644
+--- a/packages/tx-manifest/src/review/semantics.test.ts
++++ b/packages/tx-manifest/src/review/semantics.test.ts
+@@ -464,7 +464,7 @@ describe("what an action requires of an input beyond where its money comes from"
+ 		expect(isRefusal(result)).toBe(false);
+ 	});
+ 
+-	test("but a relative timelock refuses, because one sequence covers every input", async () => {
++	test("but a relative timelock on a wallet input refuses", async () => {
+ 		const result = await reviewPay(
+ 			payDocument((pay) => {
+ 				const inputs = pay.inputs as Record<string, unknown>[];
+@@ -477,6 +477,7 @@ describe("what an action requires of an input beyond where its money comes from"
+ 
+ 		if (isRefusal(result)) {
+ 			expect(result.reject).toBe("unimplemented-construct");
++			expect(result.reason).toContain("would inherit that wait");
+ 		}
+ 	});
+ 
+diff --git a/packages/tx-manifest/src/evaluation/inputRules.test.ts b/packages/tx-manifest/src/evaluation/inputRules.test.ts
+new file mode 100644
+index 0000000..b5acfe0
+--- /dev/null
++++ b/packages/tx-manifest/src/evaluation/inputRules.test.ts
+@@ -0,0 +1,104 @@
++import { describe, expect, test } from "bun:test";
++
++import { type InputRule, relativeTimelockPlacement, transactionSequence } from "./inputRules";
++
++const covenantInput = (id: string) => ({ declaredBy: id });
++
++const walletInput = () => ({});
++
++describe("the one sequence this wallet sets for a whole transaction", () => {
++	test("is none where no input asks for one", () => {
++		expect(transactionSequence([{ id: "a" }, { id: "b" }])).toEqual({ ok: true, value: undefined });
++	});
++
++	test("is the value the inputs agree on", () => {
++		const rules: InputRule[] = [
++			{ id: "a", sequence: 4_294_967_294 },
++			{ id: "b" },
++			{ id: "c", sequence: 4_294_967_294 },
++		];
++
++		expect(transactionSequence(rules)).toEqual({ ok: true, value: 4_294_967_294 });
++	});
++
++	test("refuses where two inputs ask for different ones", () => {
++		const rules: InputRule[] = [
++			{ id: "a", sequence: 4_294_967_294 },
++			{ id: "b", sequence: 4_294_967_293 },
++		];
++		const result = transactionSequence(rules);
++
++		expect(result.ok).toBe(false);
++
++		if (!result.ok) {
++			expect(result.reason).toContain("cannot give two inputs different ones");
++		}
++	});
++
++	test("carries a relative timelock rather than refusing it outright", () => {
++		expect(transactionSequence([{ id: "a", sequence: 10 }])).toEqual({ ok: true, value: 10 });
++	});
++});
++
++describe("whether one sequence can carry a relative timelock faithfully", () => {
++	test("it can where the asking input is the only one in the transaction", () => {
++		const rules: InputRule[] = [{ id: "will_in", sequence: 25_920 }];
++
++		expect(relativeTimelockPlacement(25_920, rules, [covenantInput("will_in")])).toEqual({
++			ok: true,
++		});
++	});
++
++	test("it can where every input in the transaction asks for the same wait", () => {
++		const rules: InputRule[] = [
++			{ id: "one_in", sequence: 144 },
++			{ id: "two_in", sequence: 144 },
++		];
++		const placed = [covenantInput("one_in"), covenantInput("two_in")];
++
++		expect(relativeTimelockPlacement(144, rules, placed)).toEqual({ ok: true });
++	});
++
++	test("it cannot where a wallet input would inherit the wait", () => {
++		const rules: InputRule[] = [{ id: "will_in", sequence: 25_920 }];
++		const placed = [covenantInput("will_in"), walletInput()];
++		const result = relativeTimelockPlacement(25_920, rules, placed);
++
++		expect(result.ok).toBe(false);
++
++		if (!result.ok) {
++			expect(result.reason).toContain("will_in");
++			expect(result.reason).toContain("1 other input would inherit that wait");
++		}
++	});
++
++	test("it counts every input that would inherit the wait", () => {
++		const rules: InputRule[] = [{ id: "will_in", sequence: 25_920 }];
++		const placed = [covenantInput("will_in"), walletInput(), walletInput()];
++		const result = relativeTimelockPlacement(25_920, rules, placed);
++
++		expect(result.ok).toBe(false);
++
++		if (!result.ok) {
++			expect(result.reason).toContain("2 other inputs would inherit that wait");
++		}
++	});
++
++	test("it cannot where a co-spent covenant input asked for nothing", () => {
++		const rules: InputRule[] = [{ id: "locked_in", sequence: 144 }, { id: "open_in" }];
++		const placed = [covenantInput("locked_in"), covenantInput("open_in")];
++
++		expect(relativeTimelockPlacement(144, rules, placed).ok).toBe(false);
++	});
++
++	test("a sequence with the timelock bit disabled constrains no input, so it carries", () => {
++		const rules: InputRule[] = [{ id: "will_in", sequence: 4_294_967_294 }];
++		const placed = [covenantInput("will_in"), walletInput()];
++
++		expect(relativeTimelockPlacement(4_294_967_294, rules, placed)).toEqual({ ok: true });
++	});
++
++	test("an undeclared sequence carries whatever the inputs are", () => {
++		expect(relativeTimelockPlacement(undefined, [], [walletInput()])).toEqual({ ok: true });
++	});
++});

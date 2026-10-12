@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Allowance covenant: Humid only, no wasm</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1a1a18; --mut:#6b6b66; --line:#ddddd6; --acc:#2f5d50;
+          --warn:#8a4b1e; --err:#8c2f2f; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding-block:24px; padding-left:20px; padding-right:20px;
+         background:var(--bg); color:var(--fg);
+         font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  main { max-width:820px; margin:0 auto; }
+  h1 { font-size:21px; margin:0 0 4px; }
+  h2 { font-size:16px; margin:0 0 8px; }
+  .sub, .note { color:var(--mut); font-size:13.5px; }
+  .sub { margin:0 0 18px; }
+  section { background:#fff; border:1px solid var(--line); border-radius:8px;
+            padding:16px; margin-bottom:14px; }
+  .tag { float:right; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+         padding:2px 8px; border-radius:10px; background:#eef2f0; color:var(--acc);
+         border:1px solid #d6e0db; }
+  label { display:block; font-size:13px; color:var(--mut); margin:8px 0 2px; }
+  input[type=text], input[type=number], textarea {
+    width:100%; padding:7px 9px; font:inherit; border:1px solid var(--line);
+    border-radius:5px; background:#fff; color:inherit; }
+  input[type=text], textarea { font-family:ui-monospace,Menlo,monospace; font-size:12.5px; }
+  textarea { resize:vertical; }
+  button { font:inherit; padding:7px 13px; border-radius:5px; border:1px solid var(--acc);
+           background:var(--acc); color:#fff; cursor:pointer; margin:10px 6px 0 0; }
+  button.sec { background:#fff; color:var(--acc); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .out { margin-top:10px; padding:9px 11px; border-radius:5px; background:#f4f4f1;
+         border:1px solid var(--line); white-space:pre-wrap; word-break:break-all;
+         font-family:ui-monospace,Menlo,monospace; font-size:12.5px; }
+  .out:empty { display:none; }
+  .err { color:var(--err); } .warn { color:var(--warn); }
+  .caution { border-left:3px solid var(--warn); background:#fdf6ef; padding:10px 13px;
+             border-radius:5px; font-size:13.5px; margin:0 0 16px; }
+  table { width:100%; border-collapse:collapse; margin-top:10px; font-size:13.5px; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
+  th { color:var(--mut); font-weight:600; }
+  .wrap { overflow-x:auto; }
+  code { font-family:ui-monospace,Menlo,monospace; font-size:12.5px; }
+  [hidden] { display:none !important; }
+  .hint-inline { font-size:12.5px; color:var(--mut); display:block; margin-top:3px; }
+  .row2 { display:flex; flex-wrap:wrap; gap:12px; }
+  .row2 > div { flex:1 1 260px; min-width:0; }
+  .block { border-top:1px solid var(--line); margin-top:14px; padding-top:10px; }
+  .block > strong { font-size:13.5px; }
+  #state { font-size:13px; color:var(--mut); margin:0 0 16px; }
+  #state b { font-weight:600; }
+  #state .yes { color:var(--acc); }
+  #state .no { color:var(--mut); }
+  #ask { position:fixed; inset:0; z-index:50; display:flex; align-items:center;
+         justify-content:center; padding:20px; background:rgba(26,26,24,.45); }
+  #ask-panel { background:#fff; border:1px solid var(--line); border-radius:8px;
+               padding:18px; max-width:520px; width:100%;
+               box-shadow:0 10px 40px rgba(0,0,0,.18); }
+  #ask-body { white-space:pre-wrap; background:#f4f4f1; border:1px solid var(--line);
+              border-radius:5px; padding:10px 12px; margin:10px 0 4px;
+              font-family:ui-monospace,Menlo,monospace; font-size:12.5px; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Allowance covenant <span class="tag">Humid only</span></h1>
+<p class="sub">The same contract as the sibling <code>allowance-lwk</code> demo, driven
+entirely through the Humid extension. <strong>No wasm, no build step, no toolchain</strong>:
+one static HTML file plus the contract and its manifest. Humid does all the compiling,
+signing and broadcasting; this page only says what to do and keeps track of where the money
+is. Liquid testnet only.</p>
+
+<p class="sub"><strong>The steps run in order, top to bottom.</strong> The
+<b>beneficiary</b> does 1 and 2 and sends their key over; the <b>benefactor</b> does 3, 4
+and 5 and sends the completed terms back; the beneficiary does 6 and 7. Nothing asks you
+to scroll back up: the covenant address only exists after funding, so the handoff is 5
+and receiving it is 6.</p>
+<p class="sub">One Humid wallet can play both roles, in which case you can skip 5 and 6
+entirely and just keep going. Two browser profiles, each with its own Humid, is the
+realistic two-party test.</p>
+
+<p id="state"></p>
+
+<section>
+  <h2>The contract</h2>
+  <p class="note">Shared by both roles and filled in for you: funding writes them, watching
+  reads them. Paste either by hand if you were told it rather than sent a terms blob.</p>
+  <div class="row2">
+    <div>
+      <label for="address">Covenant address</label>
+      <input type="text" id="address" placeholder="appears once the allowance is funded">
+    </div>
+    <div>
+      <label for="fundtxid">Funding transaction id</label>
+      <input type="text" id="fundtxid" placeholder="set automatically when you fund">
+    </div>
+  </div>
+  <button id="findaddr" class="sec">Find address from that txid</button>
+  <div class="out" id="out-terms"></div>
+</section>
+
+<div class="caution">
+Humid needs the patch at <code>../allowance-humid/humid-allowance-fixes.patch</code> applied
+and rebuilt; without it every withdrawal is refused as <code>unimplemented-construct</code>,
+and <code>FullWithdraw</code> fails separately as &ldquo;pays nothing&rdquo;. On Humid's
+&ldquo;Connect this dapp?&rdquo; screen, <strong>tick <code>processConfidentialTransaction</code></strong>:
+that list starts empty, and without it every action raises its own extra prompt.
+</div>
+
+<section>
+  <h2>1 &middot; Humid</h2>
+  <p class="note">Checks the extension is injecting into this page, and whether a session
+  already exists. Reading the session does not prompt; creating one does, so this page only
+  creates one when a call is actually refused.</p>
+  <button id="detect">Check for Humid</button>
+  <div class="out" id="out-detect"></div>
+</section>
+
+<section>
+  <h2>2 &middot; Your key<span class="tag">beneficiary</span></h2>
+  <p class="note">Humid shows your public key nowhere, so derive it from the descriptor it
+  signs with: a BIP-84 xpub already at <code>m/84'/1'/0'</code>, plus two non-hardened steps.
+  Send the benefactor the 64-hex value. This is the only place this page needs any
+  cryptography, and it is only needed once: derive it, write it down, and you could delete
+  the three imported libraries this page uses for it.</p>
+  <button id="getkey">Derive my key from Humid</button>
+  <button id="getbalance" class="sec">Check Humid's balance</button>
+  <div class="out" id="out-key"></div>
+</section>
+
+<section>
+  <h2>3 &middot; Choose the terms<span class="tag">benefactor</span></h2>
+  <div>
+    <p class="note">These three values are compiled into the contract, so they also fix its
+    address. They cannot be changed afterwards: a different value is a different, unrelated
+    allowance somewhere else.</p>
+    <label for="benkey">Beneficiary public key (64 hex), yours if you are the
+    beneficiary (step 2 fills it in); otherwise the one they sent you</label>
+    <input type="text" id="benkey" placeholder="64 hex characters">
+    <label for="allowance">Withdrawable per period (sats)</label>
+    <input type="number" id="allowance" value="5000" min="1">
+    <label for="mindist">Blocks between withdrawals <span id="mindist-hint"></span></label>
+    <input type="number" id="mindist" value="3" min="1" max="65535">
+    <p class="note">Nothing to send yet: the covenant address is part of the terms and does
+    not exist until the allowance is funded, so the handoff is step 5.</p>
+  </div>
+</section>
+
+<section>
+  <h2>4 &middot; Fund<span class="tag">benefactor</span></h2>
+  <p class="note">Humid builds and signs this from the manifest and spends from its own
+  balance, so <strong>fund Humid first</strong>: ask
+  <a href="https://liquidtestnet.com/faucet" target="_blank" rel="noopener">liquidtestnet.com/faucet</a>
+  for testnet coins and wait about a minute. Step 2 derives the receive address to give it,
+  and &ldquo;Check Humid's balance&rdquo; there confirms they arrived. Dry run first: it costs
+  nothing and proves the manifest and contract pair up.</p>
+  <p class="note">Humid's receive address, from step 2:
+  <code id="receive">not derived yet</code></p>
+  <label for="amount">Amount to lock (sats)</label>
+  <input type="number" id="amount" value="8000" min="1">
+  <label><input type="checkbox" id="broadcast"> Broadcast for real</label>
+  <button id="fund">Fund</button>
+  <div class="out" id="out-fund"></div>
+</section>
+
+<section>
+  <h2>5 &middot; Hand the terms over<span class="tag">benefactor</span></h2>
+  <p class="note">Now that the covenant address exists, the terms are complete and the
+  beneficiary can use them. Send this however you like, since none of it is secret. They paste it
+  into step 6.</p>
+  <textarea id="termsout" rows="4" readonly placeholder="available once the covenant address is known"></textarea>
+  <button id="copyterms" class="sec">Copy</button>
+  <div class="out" id="out-handoff"></div>
+</section>
+
+<section>
+  <h2>6 &middot; Receive the terms<span class="tag">beneficiary</span></h2>
+  <p class="note">For the two-party case: paste the blob a benefactor sent you from their
+  step 5, and this fills in everything above at once, the three terms and the covenant
+  address, so you can watch and withdraw. <strong>Playing both roles in this one browser?
+  Skip this; you already have all of it.</strong></p>
+  <p class="note">This unpacks rather than discovers. With no compiler here, the address it
+  names is taken on trust: nothing in this page can confirm those three values produce it.</p>
+  <textarea id="termsin" rows="3" placeholder='Paste the benefactor&apos;s blob: {"BENEFICIARY_KEY":"…","ALLOWANCE_AMOUNT":"5000","MIN_DISTANCE":3,"address":"tex1p…"}'></textarea>
+  <button id="loadterms" class="sec">Unpack these terms</button>
+  <div class="out" id="out-termsin"></div>
+</section>
+
+<section>
+  <h2>7 &middot; Withdraw<span class="tag">beneficiary</span></h2>
+  <p class="note">Every UTXO at the covenant address is a separate allowance with its own
+  timelock, never summed and never mergeable. Each is labelled with the action its current
+  balance makes valid.</p>
+  <p class="note">The timelock measures only the <em>age of that UTXO</em>: the contract
+  counts blocks since whichever transaction created it, and cannot tell, or care,
+  whether that was the benefactor's deposit or the continuation output of your own last
+  withdrawal. So the clock restarts after every partial withdrawal, and an instance you
+  just created waits exactly as long as a freshly deposited one.</p>
+  <p class="note">Refresh is manual on purpose: this is a shared public Esplora instance
+  that rate-limits hard after a burst.</p>
+  <label><input type="checkbox" id="wd-broadcast"> Broadcast for real</label>
+  <span class="hint-inline">Left unchecked, Humid builds and signs the withdrawal and sends
+  nothing, the same meaning as the box in step 4. Worth doing once per allowance.</span>
+  <button id="refresh">Refresh status</button>
+  <div class="out" id="out-status"></div>
+  <div class="wrap"><table id="rows" hidden>
+    <thead><tr><th>Instance</th><th>Balance</th><th>Timelock</th><th>Action</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+  <div class="out" id="out-claim"></div>
+</section>
+
+<section>
+  <h2>Log</h2>
+  <button id="clear" class="sec">Clear</button>
+  <div class="out" id="log"></div>
+</section>
+
+</main>
+
+<div id="ask" hidden>
+  <div id="ask-panel" role="dialog" aria-modal="true" aria-labelledby="ask-title">
+    <h2 id="ask-title">Confirm this withdrawal</h2>
+    <p class="note">Check the numbers before Humid signs anything. This spends a real
+    testnet UTXO and cannot be undone.</p>
+    <div id="ask-body"></div>
+    <button id="ask-ok">Hand it to Humid</button>
+    <button id="ask-cancel" class="sec">Cancel</button>
+  </div>
+</div>
+
+<script type="module">
+// The only dependency in this file, and only for step 2's BIP32 derivation. Everything
+// else is fetch() and arithmetic. Loaded lazily so the rest of the page works offline.
+const CURVES = "https://cdn.jsdelivr.net/npm/@noble/curves@1.9.7/secp256k1.js/+esm";
+const HASHES = "https://cdn.jsdelivr.net/npm/@noble/hashes@1.8.0/sha2.js/+esm";
+const BASE   = "https://cdn.jsdelivr.net/npm/@scure/base@1.1.1/+esm";
+// ripemd160 moved between modules across @noble/hashes versions; try both.
+const RIPEMD     = "https://cdn.jsdelivr.net/npm/@noble/hashes@1.8.0/legacy.js/+esm";
+const RIPEMD_ALT = "https://cdn.jsdelivr.net/npm/@noble/hashes@1.8.0/ripemd160.js/+esm";
+
+// blockstream.info is the only Liquid Esplora mirror that sends CORS headers, so a
+// browser page cannot use liquid.network even though its rate limits are gentler.
+const ESPLORA = "https://blockstream.info/liquidtestnet/api";
+const EXPLORER = "https://blockstream.info/liquidtestnet/tx/";
+const SCOPE = "bip122:a771da8e52ee6ad581ed1e9a99825e5b";   // Liquid testnet CAIP-2
+const LS = "allowance-humid-only";
+
+const $ = (id) => document.getElementById(id);
+const show = (id, text, cls) => { const e = $(id); e.textContent = text; e.className = "out " + (cls || ""); };
+const log = (...p) => { $("log").textContent += new Date().toISOString().slice(11,19) + "  " + p.join(" ") + "\n"; };
+const hex = (b) => Array.from(b, (x) => x.toString(16).padStart(2,"0")).join("");
+
+// Known failures, each paired with the thing to actually do about it. Humid's own
+// messages say what went wrong and never what to do next, and most of these are
+// one-time setup problems rather than anything about this contract.
+const NEXT_STEPS = [
+  [/unlock the wallet/i,
+   "Humid is locked. Open it: click the puzzle-piece Extensions button at the top right " +
+   "of the browser, then Humid (pin it there to save a click next time). Enter your " +
+   "password, and try again. Humid re-locks itself after a while, so expect this " +
+   "occasionally rather than once."],
+  [/window\.humid is missing/i,
+   "Check the extension is enabled at chrome://extensions, that this page is served over " +
+   "http:// rather than opened as a file://, and that you are in the Chromium profile " +
+   "Humid is installed in."],
+  [/unimplemented-construct|relative timelock/i,
+   "This is the un-patched relative-timelock bug. Apply " +
+   "../allowance-humid/humid-allowance-fixes.patch to your Humid checkout, rebuild with " +
+   "bun run build, and reload the extension at chrome://extensions."],
+  [/pays nothing/i,
+   "This is the un-patched FullWithdraw bug. The same patch " +
+   "(../allowance-humid/humid-allowance-fixes.patch) fixes it; rebuild and reload the " +
+   "extension."],
+  [/is neither a parameter nor an argument/i,
+   "Usually a request-shape problem rather than a manifest one: `instance` has to be " +
+   "double-nested as {instance:{fields:{…}}} inside the instance field. This page does " +
+   "that already, so if you see it here the manifest and the action's parameters have " +
+   "genuinely diverged."],
+  [/insufficient funds|shortfall|nothing funding it/i,
+   "Humid's own wallet is short of testnet L-BTC. Copy a receive address from the " +
+   "extension and top it up at https://liquidtestnet.com/faucet, then wait about a minute."],
+  [/user rejected|denied/i,
+   "The request was declined in the extension's popup. Nothing was sent."],
+  [/no handler for method/i,
+   "Chain methods have to go through wallet_invokeMethod inside a session; a bare method " +
+   "name is not callable on the injected provider."],
+];
+
+// A Humid refusal throws, carrying reject/reason in the error data: that pair is the
+// actual diagnosis, so dig it out rather than printing "[object Object]".
+function errText(e) {
+  if (e == null) return "(no error object)";
+  if (typeof e === "string") return e;
+  const d = (e.data && typeof e.data === "object") ? e.data : e;
+  let s = e.message || JSON.stringify(e);
+  if (d.reject) s += "\n  reject: " + d.reject;
+  if (d.reason) s += "\n  reason: " + d.reason;
+
+  const hit = NEXT_STEPS.find(([re]) => re.test(s));
+  return hit ? s + "\n\n→ " + hit[1] : s;
+}
+
+// ---- Humid RPC -------------------------------------------------------------
+// The injected provider exposes only CAIP-25/27 session methods; every chain method
+// goes through wallet_invokeMethod. wallet_createSession ALWAYS shows a connect prompt
+// and revokes any existing session first, so never call it speculatively: try the
+// invocation, and only establish a session if it is actually refused.
+let sessionId = null;
+
+const ask = (method, params) => {
+  if (!window.humid) throw new Error(
+    "window.humid is missing. Humid is not installed, not enabled, or not injecting here. " +
+    "serve this page over http://, not file://.");
+  return window.humid.request({ method, params });
+};
+
+const unauthorized = (e) =>
+  /no active session|not authorized|unauthorized|createSession/i.test((e && (e.message || e.reason) || "") + "");
+
+async function invoke(method, params) {
+  const call = () => ask("wallet_invokeMethod", {
+    scope: SCOPE, ...(sessionId ? { sessionId } : {}), request: { method, params },
+  });
+  try {
+    return await call();
+  } catch (e) {
+    if (!unauthorized(e)) throw e;
+    log("no usable session, asking Humid to connect");
+    const s = await ask("wallet_createSession", {
+      requiredScopes: { [SCOPE]: { methods: [method], notifications: [] } },
+    });
+    sessionId = (s && s.sessionId) || sessionId;
+    return call();
+  }
+}
+
+// Humid wants the manifest and the contract source handed to it on every call; it never
+// fetches either itself. The key must match the source path the manifest names.
+async function act(action, extra) {
+  const [manifest, source] = await Promise.all([
+    fetch("./txmanifest.json").then((r) => r.json()),
+    fetch("./allowance.simf").then((r) => r.text()),
+  ]);
+  return invoke("processConfidentialTransaction", {
+    manifest, contractSources: { "./allowance.simf": source }, action, ...extra,
+  });
+}
+
+// ---- terms -----------------------------------------------------------------
+const terms = () => {
+  const k = $("benkey").value.trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(k)) throw new Error("Beneficiary key must be exactly 64 hex characters.");
+  const a = $("allowance").value.trim(), d = Number($("mindist").value);
+  if (!(Number(a) > 0)) throw new Error("Allowance must be above zero.");
+  if (!Number.isInteger(d) || d < 1 || d > 65535) throw new Error("Blocks must be 1..65535.");
+  return { BENEFICIARY_KEY: k, ALLOWANCE_AMOUNT: a, MIN_DISTANCE: d };
+};
+
+// A single line of state, so you can tell at a glance what this page has and what it is
+// still missing; the page is otherwise five boxes with no overview.
+// The handoff blob only makes sense once the address exists, so build it from state
+// rather than from a button press, and leave it empty until it is usable.
+function syncHandoff() {
+  const addr = $("address").value.trim();
+  const key = $("benkey").value.trim().toLowerCase();
+  const ready = addr && /^[0-9a-f]{64}$/.test(key);
+  $("termsout").value = ready ? JSON.stringify({
+    BENEFICIARY_KEY: key,
+    ALLOWANCE_AMOUNT: $("allowance").value.trim(),
+    MIN_DISTANCE: Number($("mindist").value),
+    address: addr,
+  }) : "";
+  $("copyterms").disabled = !ready;
+  $("copyterms").title = ready ? "" : addr
+    ? "Set a valid beneficiary key in step 3 first."
+    : "No covenant address yet. Fund the allowance in step 4.";
+}
+
+// Buttons whose prerequisites do not hold should say so rather than fail on click.
+function syncButtons() {
+  const txid = /^[0-9a-f]{64}$/.test($("fundtxid").value.trim());
+  const addr = !!$("address").value.trim();
+  const key = /^[0-9a-f]{64}$/.test($("benkey").value.trim().toLowerCase());
+  const pasted = !!$("termsin").value.trim();
+  $("loadterms").disabled = !pasted;
+  $("loadterms").title = pasted
+    ? ""
+    : "Nothing pasted. This unpacks a terms blob from a benefactor, and is unnecessary if you " +
+      "are both parties in this browser.";
+  $("findaddr").disabled = !txid;
+  $("findaddr").title = txid ? "" : "No funding transaction id yet.";
+  $("fund").disabled = !key;
+  $("fund").title = key ? "" : "Set a valid beneficiary public key in step 3 first.";
+  $("refresh").disabled = !addr && !txid;
+  $("refresh").title = addr
+    ? ""
+    : txid
+    ? "No address yet, but the funding txid is known, so this will look it up first."
+    : "No covenant address yet. Fund it, or paste one into the contract box at the top.";
+}
+
+function syncState() {
+  syncHandoff();
+  syncButtons();
+  const bits = [];
+  const mark = (ok, label) => `<b class="${ok ? "yes" : "no"}">${ok ? "✓" : "·"}</b> ${label}`;
+  const key = /^[0-9a-f]{64}$/.test($("benkey").value.trim().toLowerCase());
+  const addr = !!$("address").value.trim();
+  const txid = /^[0-9a-f]{64}$/.test($("fundtxid").value.trim());
+  bits.push(mark(key, "beneficiary key"));
+  bits.push(mark(true, `terms: ${$("allowance").value || "?"} sats / ${$("mindist").value || "?"} blocks`));
+  bits.push(mark(addr, addr ? "covenant address" : "no covenant address yet"));
+  if (txid && !addr) bits.push(mark(false, "funding txid known, looking up address"));
+  $("state").innerHTML = bits.join(" &nbsp;·&nbsp; ");
+}
+
+const save = () => {
+  try {
+    localStorage.setItem(LS, JSON.stringify({
+      benkey: $("benkey").value, allowance: $("allowance").value,
+      mindist: $("mindist").value, address: $("address").value,
+      fundtxid: $("fundtxid").value, amount: $("amount").value,
+    }));
+  } catch { /* private window */ }
+  syncState();
+};
+
+const restore = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem(LS) || "null");
+    if (!v) return;
+    for (const k of ["benkey","allowance","mindist","address","fundtxid","amount"]) {
+      if (v[k]) $(k).value = v[k];
+    }
+  } catch { /* ignore */ }
+};
+
+// Liquid blocks are ~1 minute and low-variance, so this translation is honest.
+const asTime = (b) => b < 90 ? `${b} min` : b < 2880 ? `${(b/60).toFixed(1)} hours` : `${(b/1440).toFixed(1)} days`;
+const hint = () => { const d = Number($("mindist").value); $("mindist-hint").textContent = d > 0 ? `≈ ${asTime(d)}` : ""; };
+for (const id of ["benkey","allowance","mindist","address","fundtxid","amount"]) {
+  $(id).addEventListener("input", () => { hint(); save(); });
+}
+// Not persisted, but it gates its own button, so keep that in step.
+$("termsin").addEventListener("input", syncButtons);
+
+$("copyterms").onclick = async () => {
+  const blob = $("termsout").value;
+  if (!blob) { show("out-handoff", "Nothing to copy yet.", "warn"); return; }
+  try {
+    await navigator.clipboard.writeText(blob);
+    show("out-handoff", "Copied. Send it to the beneficiary however you like.");
+  } catch {
+    show("out-handoff", "The clipboard refused; select the text above and copy it by hand.", "warn");
+  }
+};
+
+$("loadterms").onclick = () => {
+  try {
+    const v = JSON.parse($("termsin").value.trim());
+    if (v.BENEFICIARY_KEY) $("benkey").value = String(v.BENEFICIARY_KEY).toLowerCase();
+    if (v.ALLOWANCE_AMOUNT) $("allowance").value = String(v.ALLOWANCE_AMOUNT);
+    if (v.MIN_DISTANCE) $("mindist").value = String(v.MIN_DISTANCE);
+    if (v.address) $("address").value = String(v.address);
+    hint(); save();
+    // Without a compiler this page cannot check that these terms produce this address,
+    // it is taken on the benefactor's word. The lwk_wasm sibling demo re-derives and
+    // verifies it, which is the one thing dropping the wasm actually costs.
+    const addr = $("address").value.trim();
+    if (!addr) {
+      show("out-termsin",
+        "Unpacked, but these terms carry no covenant address, so there is nothing to " +
+        "watch yet. The benefactor has to fund the allowance first and then re-send the " +
+        "terms from their step 5.", "err");
+      return;
+    }
+
+    show("out-termsin",
+      "Unpacked:\n" +
+      "  allowance: " + $("allowance").value + " sats every " + $("mindist").value + " blocks\n" +
+      "  address:   " + addr + "\n\n" +
+      "Loading the instances at that address now. (The address is taken on trust: with no " +
+      "compiler here, nothing in this page can confirm these three values produce it.)");
+    // Chain straight into the indexer, so unpacking terms visibly does something rather
+    // than just filling fields in a box further up the page.
+    $("refresh").click();
+  } catch (e) { show("out-termsin", "Could not read that: " + errText(e), "err"); }
+};
+
+// ---- step 1: detect --------------------------------------------------------
+$("detect").onclick = async () => {
+  show("out-detect", "Looking…");
+  try {
+    const s = await ask("wallet_getSession", {});          // read-only, never prompts
+    const scopes = Object.keys((s && s.sessionScopes) || {});
+    show("out-detect", "Humid is injecting into this page.\nauthorized session: " +
+      (scopes.length ? "yes: " + scopes.join(", ") : "none yet, it will ask on first use"));
+    log("humid detected");
+  } catch (e) { show("out-detect", errText(e), "err"); }
+};
+
+// ---- step 2: derive the beneficiary key ------------------------------------
+$("getkey").onclick = async () => {
+  show("out-key", "Asking Humid for its descriptor…");
+  try {
+    const res = await invoke("getWalletDescriptor", {
+      descriptorType: "publicWalletDescriptor",
+      descriptorFormat: [{ format: "bip380-split-branches" }],
+    });
+    const ext = ((res && res.descriptors && res.descriptors[0] &&
+                  res.descriptors[0].branchDescriptors) || []).find((b) => b.branch === "external");
+    if (!ext) throw new Error("no external branch in the descriptor response");
+    const m = /\]([tx]pub[1-9A-HJ-NP-Za-km-z]+)\//.exec(ext.descriptor);
+    if (!m) throw new Error("no xpub inside the descriptor string");
+
+    const [{ secp256k1 }, { sha256 }, { base58check }] =
+      await Promise.all([import(CURVES), import(HASHES), import(BASE)]);
+    const raw = base58check(sha256).decode(m[1]);
+    if (raw.length !== 78) throw new Error(`xpub decoded to ${raw.length} bytes, expected 78`);
+
+    const big = (b) => b.reduce((n, x) => (n << 8n) | BigInt(x), 0n);
+    const ckd = async (pub, cc, i) => {
+      const d = new Uint8Array(37); d.set(pub, 0); new DataView(d.buffer).setUint32(33, i, false);
+      const key = await crypto.subtle.importKey("raw", cc, { name:"HMAC", hash:"SHA-512" }, false, ["sign"]);
+      const I = new Uint8Array(await crypto.subtle.sign("HMAC", key, d));
+      const p = secp256k1.ProjectivePoint.BASE.multiply(big(I.slice(0,32)))
+        .add(secp256k1.ProjectivePoint.fromHex(hex(pub)));
+      return { pub: p.toRawBytes(true), cc: I.slice(32,64) };
+    };
+    // xpub is at m/84'/1'/0'; add external chain (0) then first address (0).
+    const chain = await ckd(raw.slice(45,78), raw.slice(13,45), 0);
+    const first = await ckd(chain.pub, chain.cc, 0);
+    const xonly = hex(first.pub.slice(1));            // drop the parity byte
+
+    $("benkey").value = xonly; save(); hint();
+
+    // Humid exposes no getAddress method, so derive its first receive address from the
+    // same descriptor: P2WPKH of HASH160(pubkey), bech32, witness v0, so bech32 and not
+    // the bech32m used for the taproot covenant, with Liquid testnet's "tex" HRP.
+    let receive = null;
+    try {
+      const { sha256: sha } = await import(HASHES);
+      const { ripemd160 } = await import(RIPEMD).catch(() => import(RIPEMD_ALT));
+      const { bech32 } = await import(BASE);
+      receive = bech32.encode("tex", [0, ...bech32.toWords(ripemd160(sha(first.pub)))]);
+      $("receive").textContent = receive;
+      log("derived receive address", receive);
+    } catch (e) {
+      log("receive-address derivation unavailable:", errText(e));
+    }
+
+    show("out-key",
+      "The key Humid signs with. Give this to the benefactor:\n" + xonly +
+      (receive
+        ? "\n\nHumid's first receive address, derived from the same descriptor:\n" + receive +
+          "\n\nPaste that into https://liquidtestnet.com/faucet to fund the wallet, then " +
+          "press \"Check Humid's balance\". Humid's own receive screen may show the " +
+          "confidential (tlq1…) form of the same wallet instead; both are yours and the " +
+          "faucet takes either. If a faucet payment never shows up, use the address from " +
+          "Humid's own screen."
+        : "") +
+      "\n\nraw descriptor, so the derivation is checkable rather than trusted:\n" + ext.descriptor);
+    log("derived beneficiary key", xonly);
+  } catch (e) { show("out-key", errText(e), "err"); }
+};
+
+// ---- reading the covenant address straight out of the raw transaction -----
+// Humid hands back the full transactionHex, so the address can be had immediately
+// rather than waiting for Esplora to index anything. No Elements parser is needed: a
+// taproot scriptPubKey is the fixed 34-byte pattern 22·5120·<32 bytes> in the raw hex,
+// and nothing else in a Fund transaction looks like that; Humid's own change output is
+// BIP-84 P2WPKH (0014·<20 bytes>). bech32m comes from @scure/base, already imported
+// for the xpub, so this costs no new dependency.
+//
+// It is a scan, not a parse, so treat it as provisional: if more than one candidate
+// turns up it guesses nothing, and whatever it produces is cross-checked against
+// Esplora once the transaction is indexed.
+const TAPROOT_IN_HEX = /22(5120[0-9a-f]{64})/g;
+
+async function addressFromTransactionHex(txHex) {
+  const seen = new Set();
+  for (const m of String(txHex).toLowerCase().matchAll(TAPROOT_IN_HEX)) seen.add(m[1]);
+  if (seen.size !== 1) return null;            // zero or ambiguous: do not guess
+
+  const script = [...seen][0];                  // 5120 + 32-byte witness program
+  const program = Uint8Array.from(script.slice(4).match(/../g).map((h) => parseInt(h, 16)));
+  const { bech32m } = await import(BASE);
+  // Liquid testnet unconfidential segwit HRP is "tex"; witness v1 uses bech32m.
+  return bech32m.encode("tex", [1, ...bech32m.toWords(program)]);
+}
+
+// ---- finding the covenant address from the chain --------------------------
+// With no compiler here the address has to be recognised in the funding transaction.
+//
+// Never identify it by position. Confidential transactions deliberately randomise output
+// order, so "output 0 is the covenant" is wrong by design rather than merely fragile,
+// and this page did not build the transaction, Humid did. Identify it by shape instead: the
+// covenant is pay-to-taproot, while Humid's own change is BIP-84 P2WPKH. If that is
+// ambiguous, fall back to the funded amount; if that is ambiguous too, give up and say
+// so rather than watch an address that might be someone's change.
+function covenantAddressFrom(tx, expectedSats) {
+  const outs = (tx && tx.vout) || [];
+  const taproot = outs.filter((o) => o.scriptpubkey_type === "v1_p2tr" && o.scriptpubkey_address);
+  if (taproot.length === 1) return taproot[0].scriptpubkey_address;
+
+  const byAmount = (list) => expectedSats
+    ? list.find((o) => String(o.value) === String(expectedSats))
+    : undefined;
+
+  const m = byAmount(taproot) || byAmount(outs.filter((o) => o.scriptpubkey_address));
+  return (m && m.scriptpubkey_address) || null;
+}
+
+async function findAddress(quiet) {
+  const txid = $("fundtxid").value.trim();
+  if (!/^[0-9a-f]{64}$/.test(txid)) throw new Error("Need a funding transaction id first.");
+  const res = await fetch(`${ESPLORA}/tx/${txid}`);
+  if (!res.ok) {
+    // A freshly broadcast transaction is not in the index for a few seconds.
+    throw new Error(`Esplora does not have that transaction yet (HTTP ${res.status}). ` +
+      `It usually appears within a minute of broadcasting. Press ` +
+      `"Find address from that txid" again, or it will be picked up automatically.`);
+  }
+  const addr = covenantAddressFrom(await res.json(), $("amount").value.trim());
+  if (!addr) {
+    throw new Error(
+      "Could not tell which output is the covenant. Output order is randomised, so this " +
+      "page identifies it by shape (pay-to-taproot) and then by amount. If neither is " +
+      "decisive it will not guess. Paste the covenant address into the box at the top of " +
+      "the page by hand, or " +
+      "read it off the explorer for " + txid + "."
+    );
+  }
+  $("address").value = addr; save();
+  if (!quiet) show("out-terms", "Covenant address, read from the funding transaction:\n" + addr);
+  log("covenant address", addr);
+  return addr;
+}
+
+// Esplora indexes a new transaction within seconds to a minute, so retry on a short
+// ramp rather than once. Stops as soon as it succeeds.
+function findAddressSoon(delays = [4000, 12000, 30000, 60000]) {
+  let i = 0;
+  const attempt = async () => {
+    if ($("address").value.trim()) return;                 // already known
+    try {
+      await findAddress(true);
+      show("out-fund", $("out-fund").textContent +
+        "\n\ncovenant address found: " + $("address").value);
+    } catch {
+      if (i < delays.length) setTimeout(attempt, delays[i++]);
+      else show("out-fund", $("out-fund").textContent +
+        "\n\nStill could not read the address back. Press \"Find address from that txid\" " +
+        "at the top of the page once the transaction shows on the explorer.", "warn");
+    }
+  };
+  setTimeout(attempt, delays[i++]);
+}
+
+// A scan is not a parse, so confirm it once the chain can answer. A mismatch means the
+// scan picked the wrong output and the page would otherwise watch the wrong address.
+function verifyAddressAgainstChain(claimed, delays = [8000, 25000, 60000]) {
+  let i = 0;
+  const attempt = async () => {
+    try {
+      const txid = $("fundtxid").value.trim();
+      const res = await fetch(`${ESPLORA}/tx/${txid}`);
+      if (!res.ok) throw new Error("not indexed yet");
+      const onChain = covenantAddressFrom(await res.json(), $("amount").value.trim());
+      if (onChain && onChain !== claimed) {
+        $("address").value = onChain; save();
+        show("out-terms",
+          "The address read out of the raw transaction disagreed with the chain, so it has " +
+          "been corrected:\n  from transaction: " + claimed + "\n  from Esplora:      " +
+          onChain + "\nUse the second one.", "warn");
+        log("address corrected from chain:", claimed, "->", onChain);
+      } else if (onChain) {
+        log("covenant address confirmed against the chain");
+      }
+    } catch {
+      if (i < delays.length) setTimeout(attempt, delays[i++]);
+    }
+  };
+  setTimeout(attempt, delays[i++]);
+}
+
+$("findaddr").onclick = async () => {
+  show("out-terms", "Looking up the funding transaction…");
+  try { await findAddress(false); }
+  catch (e) { show("out-terms", errText(e), "warn"); }
+};
+
+$("getbalance").onclick = async () => {
+  show("out-key", "Asking Humid for its balance…");
+  try {
+    // Omitting assetId asks for the policy asset (tL-BTC). This carries its own
+    // "Share Liquid balance?" confirmation, separate from the transaction one.
+    const r = await invoke("getBalance", {});
+    const sats = r && r.balance;
+    show("out-key",
+      "Humid's balance: " + sats + " sats" +
+      (String(sats) === "0"
+        ? "\n\nEmpty. Fund it at https://liquidtestnet.com/faucet using the receive address " +
+          "above, then wait about a minute and check again."
+        : "") +
+      "\n\nfull response:\n" + JSON.stringify(r, null, 2),
+      String(sats) === "0" ? "warn" : "");
+    log("humid balance", String(sats));
+  } catch (e) {
+    show("out-key", errText(e), "err");
+  }
+};
+
+// ---- step 4: fund ----------------------------------------------------------
+$("fund").onclick = async () => {
+  const btn = $("fund"); if (btn.disabled) return; btn.disabled = true;
+  try {
+    const t = terms();
+    const amount = $("amount").value.trim();
+    const bcast = $("broadcast").checked;
+    if (!(Number(amount) > 0)) throw new Error("Enter an amount above zero.");
+
+    show("out-fund", "Handing Fund to Humid. Confirm it in the extension…");
+    const r = await act("Fund", {
+      params: { ...t, MIN_DISTANCE: String(t.MIN_DISTANCE), amount_sat: amount },
+      broadcast: bcast,
+    });
+
+    // Response is {broadcast, feeSats (a STRING), transactionHex, txid, deployment?}.
+    // deployment carries the instance fields Humid computed, for actions with a
+    // create_instance block, i.e. Fund.
+    let note = "";
+    if (r && r.txid && r.broadcast) {
+      // Keep the txid: it is the only way to recover the covenant address later, and
+      // losing it on a page reload leaves the allowance unfindable from here.
+      $("fundtxid").value = r.txid; save();
+
+      // The raw transaction is already in hand, so read the address out of it now.
+      let local = null;
+      try { local = r.transactionHex ? await addressFromTransactionHex(r.transactionHex) : null; }
+      catch (e) { log("local address extraction failed:", errText(e)); }
+
+      if (local) {
+        $("address").value = local; save();
+        note = "\n\ncovenant address, read straight out of the transaction:\n" + local +
+               "\n\nYou can send the terms to the beneficiary now. Instances will not appear " +
+               "below until Esplora indexes the transaction, usually within a minute.";
+        log("covenant address from transactionHex", local);
+        verifyAddressAgainstChain(local);
+      } else {
+        note = "\n\nCould not read the address out of the raw transaction, so this page will " +
+               "ask Esplora instead, which needs a few seconds of indexing and will keep " +
+               "trying for about a minute. No need to reload.";
+        findAddressSoon();
+      }
+    }
+    show("out-fund",
+      (r && r.broadcast ? "Humid broadcast it." : "Dry run: built and signed, nothing sent.") +
+      (r && r.txid ? "\ntxid: " + r.txid + (r.broadcast ? "\n" + EXPLORER + r.txid : " (what it would be)") : "") +
+      (r && r.feeSats ? "\nfee: " + r.feeSats + " sats" : "") +
+      (r && r.deployment ? "\n\ninstance Humid recorded:\n" +
+        Object.entries(r.deployment).map(([k,v]) => "  " + k + " = " + v).join("\n") : "") +
+      note + "\n\nfull response:\n" + JSON.stringify(r, null, 2));
+    log("Fund:", (r && r.broadcast ? "broadcast " : "dry run ") + ((r && r.txid) || "no txid"));
+  } catch (e) {
+    show("out-fund", errText(e), "err"); log("Fund failed:", errText(e));
+  } finally { btn.disabled = false; }
+};
+
+// ---- step 7: the indexer (no wallet, no wasm, just the chain) --------------
+let rows = [];
+
+// Watching only needs the address and the two numbers; the beneficiary key is used to
+// *spend*, not to read, so do not make refreshing fail for want of it.
+function watchTerms() {
+  const a = $("allowance").value.trim(), d = Number($("mindist").value);
+  if (!(Number(a) > 0)) throw new Error("Set the allowance amount first.");
+  if (!Number.isInteger(d) || d < 1) throw new Error("Set the blocks-between-withdrawals first.");
+  return { ALLOWANCE_AMOUNT: a, MIN_DISTANCE: d };
+}
+
+async function load() {
+  const t = watchTerms();
+  const addr = $("address").value.trim();
+  if (!addr) throw new Error("No covenant address yet. Fund it, or paste the address you were sent.");
+  const [utxos, tip] = await Promise.all([
+    fetch(`${ESPLORA}/address/${addr}/utxo`).then((r) => r.json()),
+    fetch(`${ESPLORA}/blocks/tip/height`).then((r) => r.text()),
+  ]);
+  const height = parseInt(tip, 10);
+  return utxos.map((u) => {
+    const confirmed = !!(u.status && u.status.confirmed);
+    const depth = confirmed ? height - u.status.block_height + 1 : 0;
+    // A confidential output at this address carries `valuecommitment` and no `value`.
+    // Nobody can spend it, but it must not take the whole listing down either: without
+    // this guard BigInt(undefined) throws and hides every legitimate instance here too.
+    const blinded = u.value === undefined || u.value === null;
+    const value = blinded ? 0n : BigInt(u.value);
+    return {
+      txid: u.txid, vout: u.vout, value, blinded, confirmed, depth,
+      left: Math.max(0, t.MIN_DISTANCE - depth),
+      ready: !blinded && confirmed && depth >= t.MIN_DISTANCE,
+      // Which action the current balance makes valid: the contract decides this by
+      // comparing its own balance to ALLOWANCE_AMOUNT, so the caller must match it.
+      action: blinded ? "none" : value <= BigInt(t.ALLOWANCE_AMOUNT) ? "FullWithdraw" : "PartialWithdraw",
+    };
+  }).sort((a, b) => Number(b.value - a.value));
+}
+
+function render() {
+  const tb = $("rows").querySelector("tbody");
+  tb.textContent = "";
+  for (const r of rows) {
+    const key = `${r.txid}:${r.vout}`;
+    const spent = spentPending.has(key);
+    const tr = document.createElement("tr");
+    const cell = (s) => { const td = document.createElement("td"); td.textContent = s; return td; };
+    tr.append(cell(r.txid.slice(0,12) + "…:" + r.vout));
+    tr.append(cell(r.blinded ? "blinded" : r.value + " sats"));
+    tr.append(cell(spent
+      ? "spent, awaiting confirmation"
+      : r.blinded ? "unspendable, confidential output"
+      : !r.confirmed ? "unconfirmed" : r.ready ? "ready" : `${r.left} blocks, ~${asTime(r.left)}`));
+    tr.append(cell(r.action));
+    const td = document.createElement("td");
+    const b = document.createElement("button");
+    // "Waiting" collapsed two different chain states. Name them: an instance is either
+    // not yet confirmed, or confirmed but not yet old enough for BIP68.
+    b.textContent = spent
+      ? "Spent"
+      : r.blinded ? "Unspendable"
+      : r.ready ? "Claim" : !r.confirmed ? "Unconfirmed" : "Timelocked";
+    b.disabled = spent || !r.ready || claiming;
+    b.title = spent
+      ? "A spend of this instance has been broadcast. It will disappear from this list " +
+        "once the chain catches up; if a partial withdrawal, its continuation appears instead."
+      : r.blinded
+      ? "This is a confidential output. The contract's only spending path reads its own " +
+        "asset and amount directly, which works on an explicit output only, so these " +
+        "funds cannot be withdrawn by anyone. Fund the address with an explicit output."
+      : r.ready
+      ? ""
+      : !r.confirmed
+      ? "The transaction that created this instance has not confirmed yet. Nothing can " +
+        "spend it until it does."
+      : `BIP68: ${r.left} more block${r.left === 1 ? "" : "s"} must pass since the block ` +
+        `that created this instance before the network will relay a spend of it.`;
+    b.onclick = () => claim(r);
+    td.append(b); tr.append(td); tb.append(tr);
+  }
+  $("rows").hidden = rows.length === 0;
+}
+
+$("refresh").onclick = async () => {
+  show("out-status", "Querying Esplora…");
+  try {
+    // A known txid but no address means the lookup has not succeeded yet; try it now
+    // rather than reporting "no address" and making the user work it out.
+    if (!$("address").value.trim() && /^[0-9a-f]{64}$/.test($("fundtxid").value.trim())) {
+      await findAddress(true);
+    }
+    rows = await load();
+    render();
+    const total = rows.reduce((n, r) => n + r.value, 0n);
+    const blind = rows.filter((r) => r.blinded).length;
+    show("out-status", rows.length
+      ? `${rows.length} instance(s) holding ${total} sats in total: separate allowances, each with its own timelock.`
+        + (blind ? ` ${blind} confidential output(s) here cannot be spent and are not counted.` : "")
+      : "Nothing at that address yet. If you just funded it, wait about a minute.");
+  } catch (e) { show("out-status", errText(e), "err"); }
+};
+
+// ---- claim -----------------------------------------------------------------
+// Assigned once, routing to whichever claim is waiting. Re-registering per dialog is
+// how one click ends up firing several claims.
+let pendingAsk = null;
+
+function settleAsk(answer) {
+  const resolve = pendingAsk;
+  pendingAsk = null;
+  $("ask").hidden = true;
+  $("ask-body").textContent = "";
+  if (resolve) resolve(answer);
+}
+
+$("ask-ok").onclick = () => settleAsk(true);
+$("ask-cancel").onclick = () => settleAsk(false);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && pendingAsk) settleAsk(false);
+});
+
+function askConfirm(text) {
+  if (pendingAsk) return Promise.resolve(false);
+  $("ask-body").textContent = text;
+  $("ask").hidden = false;
+  $("ask-ok").focus();
+  return new Promise((resolve) => { pendingAsk = resolve; });
+}
+
+let claiming = false;
+// Outpoints we have broadcast a spend for. Esplora still reports them unspent for a
+// while, so without this the row we just spent redraws as claimable.
+const spentPending = new Set();
+
+async function claim(r) {
+  if (claiming) { show("out-claim", "One withdrawal at a time: two spends of the same instance collide.", "warn"); return; }
+  const dry = !$("wd-broadcast").checked;
+  const extra = r.action === "FullWithdraw"
+    ? "\n\nThis closes the allowance. It needs the patched Humid; unpatched it is refused " +
+      "as \"pays nothing\"." : "";
+  show("out-claim", "Waiting for you to confirm…");
+  const ok = await askConfirm(
+    `action:    ${r.action}\n` +
+    `spending:  ${r.txid}:${r.vout}\n` +
+    `balance:   ${r.value} sats\n\n` +
+    `Humid builds and signs this from the manifest and pays the withdrawal into your own ` +
+    `Humid wallet (as its change), then shows its own confirmation with the real amounts.` +
+    (dry ? `\n\nDRY RUN: broadcast:false, so nothing will be sent.` : "") + extra);
+  if (!ok) { show("out-claim", "Cancelled. Nothing was sent to Humid."); return; }
+
+  claiming = true;
+  render();        // repaint with every button disabled, not just this one
+  show("out-claim", `Handing ${r.action} to Humid. Confirm it in the extension…`);
+  try {
+    const t = terms();
+    const res = await act(r.action, {
+      params: {},
+      // Double-nested on purpose: normaliseInstance() reads raw.instance.fields, not
+      // raw.fields. Single-nesting fails silently and resurfaces later as
+      // "X is neither a parameter nor an argument of this action".
+      instance: { instance: { fields: { ...t, MIN_DISTANCE: String(t.MIN_DISTANCE) } } },
+      // state is single-level, unlike instance. Humid re-derives amount and asset from
+      // the chain rather than trusting anything this page claims.
+      state: { utxos: [{ txid: r.txid, vout: r.vout, utxo_type: "allowance" }] },
+      broadcast: !dry,
+    });
+    const sent = !!(res && res.broadcast);
+    if (sent) {
+      spentPending.add(`${r.txid}:${r.vout}`);
+      // Reconcile against the chain once, after a block, rather than polling.
+      setTimeout(() => { $("refresh").click(); }, 60000);
+    }
+    show("out-claim",
+      (sent ? `${r.action} broadcast by Humid.` : `${r.action} built and signed, not sent.`) +
+      (res && res.txid ? "\ntxid: " + res.txid + (sent ? "\n" + EXPLORER + res.txid : "") : "") +
+      (res && res.feeSats ? "\nfee: " + res.feeSats + " sats" : "") +
+      (sent && r.action === "PartialWithdraw"
+        ? "\n\nThe remainder went back to the same covenant address as a new instance. It " +
+          "will show above once this transaction confirms, starting its timelock again from " +
+          "that block: the contract measures the new UTXO's age, not yours."
+        : sent
+        ? "\n\nThat was the whole remaining balance, so this allowance is closed."
+        : "") +
+      "\n\nfull response:\n" + JSON.stringify(res, null, 2));
+    log(r.action + ":", (sent ? "broadcast " : "dry run ") + ((res && res.txid) || "no txid"));
+  } catch (e) {
+    const msg = errText(e);
+    // A same-feerate replacement rejection means an earlier attempt already reached the
+    // mempool, so the withdrawal probably succeeded.
+    const dup = /rejecting replacement|insufficient fee/i.test(msg);
+    show("out-claim", (dup
+      ? "Rejected as a replacement: an earlier attempt probably already succeeded. Check the explorer.\n\n"
+      : "") + msg, dup ? "warn" : "err");
+    log(r.action + " failed:", msg);
+  } finally {
+    claiming = false;
+    render();
+  }
+}
+
+$("clear").onclick = () => { $("log").textContent = ""; };
+
+restore(); hint(); syncState();
+
+// A reload should resume, not forget: if we know the funding txid but not yet the
+// address, go and find it.
+if (!$("address").value.trim() && /^[0-9a-f]{64}$/.test($("fundtxid").value.trim())) {
+  log("have a funding txid but no address, looking it up");
+  findAddressSoon([0, 5000, 15000]);
+}
+
+log("ready: no wasm loaded, and none needed");
+</script>
+</body>
+</html>
