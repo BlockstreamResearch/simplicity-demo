@@ -82,7 +82,7 @@ point the import in `index.html` at wherever your package manager puts it.
    actually present, with the rebuild command in the error if they aren't. This is the
    check worth running first: a feature-off build fails here rather than confusingly later.
 2. **Wallet**: a single-key LWK wallet (`Signer` → `wpkhSlip77Descriptor` → `Wollet`),
-   with Esplora scan, balance, and a faucet button.
+   with a Waterfalls scan, balance, and a faucet button.
 3. **Beneficiary key**: `Keypair` from 32 random bytes, exposing `.xOnlyPublicKey` as
    `BENEFICIARY_KEY` and signing the witness with `.signSchnorr()`. Note how much simpler
    this is than the browser-extension path, where no API exposes your own pubkey and the
@@ -251,6 +251,14 @@ whose covenant value *didn't* have to be public would get far more from it.
 - **`blockstream.info` is not an arbitrary choice.** It is the only Liquid Esplora mirror
   that sends CORS headers, so a browser page cannot use `liquid.network` even though that
   mirror has far gentler rate limits and is the right choice server-side.
+- **Wallet scans use Waterfalls, not `blockstream.info`.** A plain Esplora scan costs one
+  request per address, 40 or more per sync, sent back to back. The page scans through
+  `https://waterfalls.liquidwebwallet.org/liquidtestnet/api` with
+  `new EsploraClient(network, url, true, 1, false)`, where `true` enables Waterfalls: one
+  request returns the whole descriptor's history, so a sync costs about 3 requests plus one
+  per new transaction. That server sends CORS headers but is not a full Esplora (it has no
+  `/blocks/tip/height`), so covenant lookups and broadcasts stay on `blockstream.info`.
+  The Waterfalls operator learns the wallet's addresses.
 - **One claim at a time, page-wide.** Every Claim button disables while any claim is in
   flight, and status refreshes guard against overlapping. A per-row lock alone is not
   enough; see `logs/LOG.md` Steps 32-33, where a single click could submit twice and the

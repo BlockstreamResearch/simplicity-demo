@@ -14,6 +14,8 @@ documentation gap; see `logs/LOG.md` Step 2/3(B)).
 - **Explorer / broadcast endpoint**: `https://blockstream.info/liquidtestnet/api` ->
   `https://blockstream.info/liquid/api` (or a self-hosted Esplora instance; see
   "Infrastructure trust" below for why self-hosting matters more on mainnet).
+- **Wallet sync endpoint**: `https://waterfalls.liquidwebwallet.org/liquidtestnet/api` ->
+  `https://waterfalls.liquidwebwallet.org/liquid/api`.
 - **Asset ID**: the policy asset (LBTC) has a different, real 32-byte asset id on
   mainnet than the testnet policy asset. Do not hardcode a value copied from a web
   search. Confirm it from a live mainnet node (`getsidechaininfo`/`dumpassetlabels`)

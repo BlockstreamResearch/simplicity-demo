@@ -359,6 +359,9 @@ two genuinely separate parties.</p>
   is paced against how long there is actually left to wait, pauses when the tab is hidden,
   backs off when a response is slow or refused, and stops altogether after an hour. Press
   Refresh whenever you want an answer sooner.</p>
+  <p>Wallet syncs don't touch that instance. They go to a Waterfalls server, which returns
+  the wallet's whole history in a single request. The cost is that the Waterfalls operator
+  learns which addresses belong to the wallet.</p>
 
   <h3>Keys and custody</h3>
   <p>Both the wallet mnemonic and the beneficiary's secret key sit in this browser's
@@ -398,6 +401,11 @@ two genuinely separate parties.</p>
 // sends CORS headers, so liquid.network cannot be fetched from a browser page even
 // though it is the better choice for server-side use.
 const ESPLORA = "https://blockstream.info/liquidtestnet/api";
+// Wallet scans go to a Waterfalls server instead: it returns the whole descriptor's
+// history in one request, where a plain Esplora scan costs one request per address
+// (40 or more per sync). blockstream.info doesn't serve Waterfalls. Only the scan goes
+// here; covenant lookups and broadcasts still use ESPLORA.
+const WATERFALLS = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
 const EXPLORER_TX = "https://blockstream.info/liquidtestnet/tx/";
 const EXPLORER_ADDR = "https://blockstream.info/liquidtestnet/address/";
 const FAUCET = "https://liquidtestnet.com/api/faucet";
@@ -527,7 +535,8 @@ let network = null;    // Network
 let policyAsset = null;// AssetId
 let signer = null;     // Signer
 let wollet = null;     // Wollet
-let client = null;     // EsploraClient
+let client = null;     // EsploraClient for broadcasting
+let scanClient = null; // EsploraClient in Waterfalls mode, for wallet scans
 let benKeypair = null; // Keypair  (the beneficiary's BIP340 key)
 let contract = null;   // { source, program, address, params }
 
@@ -559,6 +568,7 @@ async function loadLibrary() {
     network = L.Network.testnet();
     policyAsset = network.policyAsset();
     client = new L.EsploraClient(network, ESPLORA, false, 1, false);
+    scanClient = new L.EsploraClient(network, WATERFALLS, true, 1, false);
     show("out-load",
       "Loaded.\nnetwork: " + network.toString() +
       "\npolicy asset: " + policyAsset.toString() +
@@ -647,11 +657,11 @@ $("btn-wallet").onclick = async () => {
 };
 
 $("btn-sync").onclick = async () => {
-  show("out-wallet", "Scanning the chain (this can take a while on first run)…");
+  show("out-wallet", "Scanning the chain…");
   try {
     needLib();
     if (!wollet) throw new Error("Open the wallet first.");
-    const update = await client.fullScan(wollet);
+    const update = await scanClient.fullScan(wollet);
     if (update) wollet.applyUpdate(update);
     const addr = wollet.address().address();
     walletBalanceSats = policyBalanceOf(wollet);
@@ -663,7 +673,9 @@ $("btn-sync").onclick = async () => {
       "\ntip height: " + wollet.tip().height(), "");
     log("synced, balance", String(walletBalanceSats));
   } catch (e) {
-    show("out-wallet", "Sync failed: " + errText(e), "err");
+    show("out-wallet", "Sync failed: " + errText(e) +
+      "\n\nWallet syncs use the Waterfalls server at " + WATERFALLS +
+      ", not blockstream.info.", "err");
     log("sync failed:", errText(e));
   }
 };
@@ -696,11 +708,10 @@ $("btn-faucet").onclick = async () => {
       "for it by hand at https://liquidtestnet.com/faucet or with your own faucet tool.",
       "");
 
-    // One check, timed for a block, deliberately not a poll, since a wallet rescan is
-    // much heavier than an Esplora read.
+    // One check, timed for about one block.
     setTimeout(async () => {
       try {
-        const upd = await client.fullScan(wollet);
+        const upd = await scanClient.fullScan(wollet);
         if (upd) wollet.applyUpdate(upd);
         walletBalanceSats = policyBalanceOf(wollet);
         const arrived = walletBalanceSats !== null &&
@@ -713,7 +724,8 @@ $("btn-faucet").onclick = async () => {
         log("post-faucet balance:", String(walletBalanceSats));
         updateUi();
       } catch (e) {
-        show("out-wallet", "Could not check the balance: " + errText(e), "warn");
+        show("out-wallet", "Could not check the balance through the Waterfalls server: " +
+          errText(e), "warn");
       }
     }, 60000);
   } catch (e) {
