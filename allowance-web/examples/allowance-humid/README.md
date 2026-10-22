@@ -13,7 +13,7 @@ HUMID-BUGS.md                the bugs and capability gaps found against Humid
 ```
 
 For a worked example to read or copy, use `../allowance-humid-only/` instead: it covers
-the same lifecycle, is the one `HOWTO.md` walks through, and handles sessions correctly.
+the same lifecycle and handles sessions correctly.
 What this directory is still the best source for is the manifest dialect, the patch, and
 the request shapes documented below.
 
@@ -39,7 +39,7 @@ bun run build        # then reload the extension at chrome://extensions
 
 The patch header records the base commits it was generated against, describes both fixes
 well enough to redo by hand against a newer Humid, and covers what to do if `git apply`
-rejects it. `HOWTO.md` Step 3 covers the same ground in sequence.
+rejects it. Step 3 of the HOWTO covers the same ground in sequence.
 
 ## How this manifest differs from `examples/allowance/txmanifest.json`
 

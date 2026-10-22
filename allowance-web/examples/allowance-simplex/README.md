@@ -1,8 +1,8 @@
 # Allowance: Simplex integration tests (drop-in files)
 
 Two files meant to be copied into a fresh `simplex init` project, not a
-self-contained project of their own; see `HOWTO.md` Step 2 at the repo root for
-the actual walkthrough (install Simplex, scaffold a project, copy these two files
+self-contained project of their own; see Step 2 of [the HOWTO](../../HOWTO.md) for
+the walkthrough (install Simplex, scaffold a project, copy these two files
 in, build, test).
 
 - `simf/allowance.simf`: this repo's own `contracts/allowance.simf`, copied
@@ -142,11 +142,10 @@ each covers:
   only (it strips the `// (N)!` line-annotation markers docs.simplicity-lang.org
   uses for its own rendering, and lightly rewords a couple of comments), with no logic
   difference. This copy uses this repo's own `contracts/allowance.simf` instead, so
-  it stays byte-identical to what the rest of this repo's HOWTO/log already
-  reference.
+  it stays byte-identical to the copy the HOWTO and the other examples use.
 - The original project's own `Cargo.toml` depends on `smplx-std` via a relative
   path into the `smplx` monorepo it lives inside (`{ path = "../../crates/simplex"
-  }`), which only resolves from inside that checkout. `HOWTO.md` Step 2 has you
+  }`), which only resolves from inside that checkout. Step 2 of the HOWTO has you
   get a working `Cargo.toml` from `simplex init` instead (which, per the Simplex
   README, is expected to pull in the real published `smplx-std` crate; run `cargo add
   --dev smplx-std` directly if it doesn't), so this copy includes neither a

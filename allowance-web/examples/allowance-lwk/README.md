@@ -4,7 +4,7 @@ The whole allowance lifecycle in one static HTML file: compile `allowance.simf` 
 browser, derive its covenant address, fund it, index live instances, and withdraw.
 
 No backend, no browser extension, no `txmanifest.json`, no build step, no framework.
-This is the "rung 2" architecture from `HOWTO.md`: a static page plus one wasm library,
+The architecture is a static page plus one wasm library,
 which is how `simplicity-lending` (Blockstream's own Simplicity app) builds its wallet
 layer, minus the React/Vite/Postgres apparatus that a production app needs and a demo
 does not.
