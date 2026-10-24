@@ -8,16 +8,13 @@ status before relying on anything here. -->
 Found while building a SimplicityHL "allowance" covenant demo (benefactor funds it,
 beneficiary withdraws up to a limit no more than once per N blocks) on Liquid testnet,
 driven entirely through Humid's real `txmanifest.json` integration (CAIP-25/27 session
-RPC → `processConfidentialTransaction`), not hand-built transactions. Full narrative,
-with exact reproduction context and the demo's own manifest/contract, lives at
-`~/src/simplicity-dev-experiment-1/logs/LOG.md` (Steps 15-34) and
-`~/src/simplicity-dev-experiment-1/examples/allowance-humid/`. This file is the
-upstream-facing summary: one entry per distinct Humid defect, file/line, current status.
+RPC → `processConfidentialTransaction`), not hand-built transactions. The demo's own
+manifest and contract are alongside this file. This file is the upstream-facing summary:
+one entry per distinct Humid defect, file/line, current status.
 
 Tally as of 2026-10-07: **6 distinct bugs found, 2 fixed (locally only, not upstream),
-4 still open.** Both local fixes ship as one patch,
-`~/src/simplicity-dev-experiment-1/examples/allowance-humid/humid-allowance-fixes.patch`,
-against base commit `7dc8535`. Three additional items are missing feature/UX gaps rather
+4 still open.** Both local fixes ship as one patch, `humid-allowance-fixes.patch` in
+this directory, against base commit `7dc8535`. Three additional items are missing feature/UX gaps rather
 than bugs, listed separately at the end.
 
 ---

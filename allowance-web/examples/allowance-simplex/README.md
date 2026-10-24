@@ -5,14 +5,13 @@ self-contained project of their own; see Step 2 of [the HOWTO](../../HOWTO.md) f
 the walkthrough (install Simplex, scaffold a project, copy these two files
 in, build, test).
 
-- `simf/allowance.simf`: this repo's own `contracts/allowance.simf`, copied
-  unchanged.
+- `simf/allowance.simf`: this repo's own `contracts/allowance.simf`, without the
+  `// (N)!` annotation markers that docs.simplicity-lang.org renders.
 - `tests/allowance_test.rs`: two integration tests against a real local Elements
   regtest node, exercising the contract through Simplex's real signing/broadcast
   API rather than reimplementing any of it by hand. Chosen to show two
-  *different* things rather than to cover every branch; see below for four more
-  already-written tests and several genuinely unwritten ones, left out of this
-  file on purpose to keep it small, but described here if you want them.
+  *different* things rather than to cover every branch. "Tests to write
+  yourself" below describes more, with what each one would prove.
 
 ## Where this came from
 
@@ -41,11 +40,11 @@ it, not a replacement for reading it.
    layer rather than inside the contract, which is worth seeing distinctly from
    a contract-level rejection (below).
 
-## Four more already-written tests, not included here
+## Tests to write yourself
 
-Real, passing tests from the same original suite, left out of the file above to
-keep the drop-in small, but genuinely exist and can be added back in (or used as
-a reference for writing your own) if you want more than two:
+Each of these is a concrete next test, roughly in order of how much new ground it
+covers. Everything they need is already in `tests/allowance_test.rs`, so writing them
+is a good way to learn the Simplex API from it. Start with these four:
 
 - `partial_withdrawal_returns_the_remainder_to_the_covenant`: the simplest
   possible valid spend: one partial withdrawal, checked directly rather than as
@@ -77,7 +76,7 @@ fn spend_skeleton(program: &AllowanceProgram, utxo: UTXO) -> FinalTransaction {
         PartialInput::new(utxo),
         ProgramInput::new(
             Box::new(program.as_ref().clone()),
-            Box::new(AllowanceWitness { signature: DUMMY_SIGNATURE }),
+            AllowanceWitness { signature: DUMMY_SIGNATURE },
         ),
         RequiredSignature::Witness("SIGNATURE".to_string()),
     );
@@ -112,11 +111,9 @@ skipped.
   25920 (what some real covenants use) is not; mine it in bounded batches instead
   of one call to the final target if you need a longer interval than this.
 
-## Tests nobody's written yet
+## More tests to write
 
-Distinct from the four above: these don't exist anywhere yet. Concrete next
-tests, not a vague "add more coverage," roughly in order of how much new ground
-each covers:
+These go further than the four above:
 
 - **Two allowances cannot be co-spent.** Pay the covenant's address twice (two
   independent allowances), then build one transaction spending both.
@@ -136,17 +133,7 @@ each covers:
 - **A fourth output is rejected**: `jet::eq_32(jet::num_outputs(), 3)` is an
   equality, not a minimum.
 
-## Adapted from the original
+## What this directory leaves out
 
-- The original's `simf/allowance.simf` differs from this one in comment wording
-  only (it strips the `// (N)!` line-annotation markers docs.simplicity-lang.org
-  uses for its own rendering, and lightly rewords a couple of comments), with no logic
-  difference. This copy uses this repo's own `contracts/allowance.simf` instead, so
-  it stays byte-identical to the copy the HOWTO and the other examples use.
-- The original project's own `Cargo.toml` depends on `smplx-std` via a relative
-  path into the `smplx` monorepo it lives inside (`{ path = "../../crates/simplex"
-  }`), which only resolves from inside that checkout. Step 2 of the HOWTO has you
-  get a working `Cargo.toml` from `simplex init` instead (which, per the Simplex
-  README, is expected to pull in the real published `smplx-std` crate; run `cargo add
-  --dev smplx-std` directly if it doesn't), so this copy includes neither a
-  `Cargo.toml` nor the other generated project scaffolding on purpose.
+There is no `Cargo.toml` or other project scaffolding here. Step 2 of the HOWTO gets
+them from `simplex init`, which declares the published `smplx-std` crate.

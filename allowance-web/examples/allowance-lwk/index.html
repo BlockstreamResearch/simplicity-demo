@@ -106,9 +106,9 @@ txmanifest.</p>
   <h2>Where you are</h2>
   <dl id="facts">
     <dt>library</dt><dd id="f-lib" class="no">not loaded</dd>
-    <dt>wallet</dt><dd id="f-wallet" class="no">not open</dd>
-    <dt>balance</dt><dd id="f-balance" class="no">unknown</dd>
-    <dt>your key</dt><dd id="f-key" class="no">not generated</dd>
+    <dt data-signer="page">wallet</dt><dd data-signer="page" id="f-wallet" class="no">not open</dd>
+    <dt data-signer="page">balance</dt><dd data-signer="page" id="f-balance" class="no">unknown</dd>
+    <dt data-signer="page">your key</dt><dd data-signer="page" id="f-key" class="no">not generated</dd>
     <dt>contract</dt><dd id="f-contract" class="no">not compiled</dd>
     <dt>can fund</dt><dd id="f-can-fund" class="no">unknown</dd>
     <dt>can withdraw</dt><dd id="f-can-withdraw" class="no">unknown</dd>
@@ -131,16 +131,19 @@ txmanifest.</p>
     <p class="note">Humid reads <code>txmanifest.humid.json</code> from this directory
     (<code>manifest_version 0.1.0</code>, its own dialect) rather than anything this page
     builds. It doesn't need a wallet here, since it holds its own funds and its own key, but it does
-    need the relative-timelock patch applied, or every withdrawal is refused with
-    <code>unimplemented-construct</code>. Its <code>FullWithdraw</code> is also still broken
-    in unpatched builds (<em>"pays nothing, so there is nothing to build"</em>), so expect the last
-    withdrawal to fail on this path.</p>
-    <p class="note"><strong>On Humid's “Connect this dapp?” screen, tick
-    <code>processConfidentialTransaction</code>.</strong> That checklist starts with nothing
-    selected, and there is a second grant check per method: without it every single action
-    raises its own “Perform a contract action?” prompt, no matter how the session is handled.
-    Connecting itself only re-prompts when the session is actually gone, which, given the
-    extension's worker lifecycle and auto-lock, is often.</p>
+    need <code>examples/allowance-humid/humid-allowance-fixes.patch</code> applied. Without
+    it every withdrawal is refused with <code>unimplemented-construct</code>, and the last one,
+    a <code>FullWithdraw</code>, with <em>"pays nothing, so there is nothing to build"</em>.</p>
+    <p class="note"><strong>Fund Humid itself before pressing Fund.</strong> Send testnet coins
+    to the receive address shown in the extension, for example through the
+    <a href="https://liquidtestnet.com/faucet" target="_blank" rel="noopener">faucet web
+    form</a>, and wait for them to confirm. This page's own wallet and faucet button are not
+    used on this path.</p>
+    <p class="note">Approve Humid's “Connect this dapp?” prompt when it appears. Every Fund
+    and claim then shows Humid's own “Perform a contract action?” confirmation: that is
+    where you review and approve each transaction. Connecting only re-prompts when the
+    session is actually gone, which, given the extension's worker lifecycle and auto-lock,
+    is often.</p>
     <button id="btn-humid-detect" class="secondary">Check for Humid</button>
     <button id="btn-humid-key" class="secondary">Get my key from Humid</button>
     <div class="out" id="out-humid"></div>
@@ -162,16 +165,11 @@ two genuinely separate parties.</p>
 <!-- ========================= BENEFACTOR ========================= -->
 <div id="tab-benefactor" class="tab-panel">
 
-<section>
+<section data-signer="page">
   <h2>Your wallet</h2>
   <p class="note">A single-key LWK wallet from a BIP-39 mnemonic kept in this browser's
   <code>localStorage</code>, in plaintext. Testnet play money only. Never put a real
   mnemonic here.</p>
-  <p class="warning" id="wallet-humid-note" hidden>Humid is the selected signer, so this
-  wallet is not used: Humid funds from its own balance and pays withdrawals to its own change
-  address. The faucet button below would fund <em>this page's</em> wallet, which Humid never
-  looks at. Fund Humid instead, through its own receive address in the extension. You can
-  skip this whole section.</p>
   <label for="mnemonic">Mnemonic (leave blank to generate one)</label>
   <input type="text" id="mnemonic" class="mono" placeholder="twelve words, or leave blank">
   <button id="btn-wallet">Open wallet</button>
@@ -204,7 +202,7 @@ two genuinely separate parties.</p>
     </div>
   </div>
   <button id="btn-compile">Compile &amp; derive address</button>
-  <button id="btn-usemine" class="secondary">Use my own key (single-wallet test)</button>
+  <button id="btn-usemine" class="secondary" data-signer="page">Use my own key (single-wallet test)</button>
   <div class="out" id="out-compile"></div>
 </section>
 
@@ -238,7 +236,7 @@ two genuinely separate parties.</p>
 <!-- ========================= BENEFICIARY ========================= -->
 <div id="tab-beneficiary" class="tab-panel" hidden>
 
-<section>
+<section data-signer="page">
   <h2>Your key</h2>
   <p class="note">The contract's <code>BENEFICIARY_KEY</code> is a BIP340 x-only public key,
   and the only way to withdraw is a signature by its private half. Strictly this needs a
@@ -293,15 +291,19 @@ two genuinely separate parties.</p>
   timelock. They are never summed and can never be merged. Each is labelled with the action
   its current balance makes valid: <code>PartialWithdraw</code> while there is more than one
   period left, <code>FullWithdraw</code> for the last one, which closes it.</p>
+  <div data-signer="page">
   <label for="payout">Pay withdrawals to (blank = this browser's own wallet)</label>
   <input type="text" id="payout" class="mono" placeholder="tex1... or tlq1...">
+  </div>
+  <p class="note" data-signer="humid" hidden>Humid pays each withdrawal to its own change address
+  and shows its own confirmation before signing.</p>
   <label><input type="checkbox" id="wd-dryrun"> Dry run: build and sign, but do not
   broadcast</label>
   <span class="hint-inline">Worth doing once per allowance: it exercises the whole path
   (compile, sighash, signature, and the contract's own execution) without spending anything. A
   failure here is the contract or the manifest refusing, not the network.</span>
   <button id="btn-status">Refresh status</button>
-  <button id="btn-payout-mine" class="secondary">Use my wallet address</button>
+  <button id="btn-payout-mine" class="secondary" data-signer="page">Use my wallet address</button>
   <button id="btn-copy-address" class="secondary">Copy covenant address</button>
   <div class="out" id="out-status"></div>
   <div class="tablewrap"><table id="instances" hidden>
@@ -561,7 +563,7 @@ async function loadLibrary() {
       throw new Error(
         "This build is missing: " + missing.join(", ") +
         ". The Simplicity API is behind a cargo feature. Rebuild with:\n" +
-        "  wasm-pack build --release --target web -- --features simplicity"
+        "  wasm-pack build --release --target web --out-dir pkg-web -- --features simplicity"
       );
     }
 
@@ -854,6 +856,12 @@ $("btn-compile").onclick = async () => {
         : "") +
       "\n\nThis address depends on all three params: change any of them and it is a " +
       "different, unrelated allowance.", "");
+    if (usingHumid() && humidKeyMatches() === false) {
+      show("out-compile", $("out-compile").textContent +
+        "\n\nThis key is not the one Humid last reported (" + humidKey.slice(0, 16) + "…). " +
+        "That is right only if someone else is the beneficiary. Testing on your own, press " +
+        "“Get my key from Humid” and compile again, or no withdrawal will work.", "warn");
+    }
     log("compiled, address", contract.address.toString());
   } catch (e) {
     show("out-compile", "Failed: " + errText(e), "err");
@@ -1121,6 +1129,7 @@ $("btn-fund").onclick = async () => {
           : "") +
         "\n\nfull response:\n" + JSON.stringify(result, null, 2), "");
       log("humid Fund:", txid || "no txid in response");
+      if (result && result.broadcast) awaitInstance(txid);
       if (broadcast) await refreshStatus();
       return;
     }
@@ -1164,6 +1173,7 @@ $("btn-fund").onclick = async () => {
       "\n\nIt will appear below as a new allowance instance once it confirms. The page " +
       "is now checking for it periodically, so you do not need to refresh by hand.", "");
     log("funded, txid", txid.toString());
+    awaitInstance(txid.toString());
     walletBalanceSats = null;          // stale now
     await refreshStatus();             // starts the pending-aware poll
   } catch (e) {
@@ -1181,19 +1191,21 @@ $("btn-fund").onclick = async () => {
 let tipCache = { height: 0, at: 0 };
 const TIP_CACHE_MS = 30000;
 
-async function cachedTipHeight() {
-  if (tipCache.height && Date.now() - tipCache.at < TIP_CACHE_MS) return tipCache.height;
+// A manual refresh passes fresh=true: someone pressing the button is asking about the
+// chain now, and a tip up to 30s old can show a ready instance as one block short.
+async function cachedTipHeight(fresh = false) {
+  if (!fresh && tipCache.height && Date.now() - tipCache.at < TIP_CACHE_MS) return tipCache.height;
   const height = parseInt(await esplora("/blocks/tip/height"), 10);
   tipCache = { height, at: Date.now() };
   return height;
 }
 
-async function loadInstances() {
+async function loadInstances(fresh = false) {
   const c = needContract();
   const addr = c.address.toString();
   const [utxoJson, tip] = await Promise.all([
     esplora(`/address/${addr}/utxo`),
-    cachedTipHeight(),
+    cachedTipHeight(fresh),
   ]);
   const utxos = JSON.parse(utxoJson);
 
@@ -1231,10 +1243,10 @@ $("btn-status").onclick = () => {
     return;
   }
   lastManualRefresh = Date.now();
-  refreshStatus();
+  refreshStatus({ fresh: true });
 };
 
-let refreshing = false;   // guards a manual click racing another refresh (LOG Step 32)
+let refreshing = false;   // guards a manual click racing another refresh
 let lastInstances = [];   // so cancelling a claim can re-render without refetching
 
 // A claim is "busy" from the click until it resolves, the confirmation dialog
@@ -1244,9 +1256,23 @@ let claimedSomething = false;   // only a real broadcast earns a chain refetch
 // Outpoints we have broadcast a spend for. Esplora keeps reporting them unspent for a
 // while, so without this the row just spent redraws as claimable.
 const spentPending = new Set();
+// Txids we broadcast that create an instance here (a Fund, or a PartialWithdraw's
+// continuation at output 0), until a refresh lists them. Without this, a refresh that
+// runs before Esplora has indexed the transaction finds nothing pending and stops.
+// Keyed by txid, valued by the covenant address it pays, so loading other terms
+// doesn't leave the poll waiting for something that address will never show.
+const awaitedTxids = new Map();
+
+function awaitInstance(txid) {
+  if (txid && contract) awaitedTxids.set(String(txid), contract.address.toString());
+}
+
+function awaitingHere() {
+  return contract && [...awaitedTxids.values()].includes(contract.address.toString());
+}
 
 // Every Claim button, every row. A claim locks the whole table, not just its own row:
-// LOG Steps 32-33 showed a per-row lock still allowed a second submission.
+// A per-row lock still allowed a second submission.
 function claimButtons() {
   return Array.from($("instances").querySelectorAll("tbody button"));
 }
@@ -1334,13 +1360,14 @@ function renderInstances(instances) {
   $("instances").hidden = false;
 }
 
-async function refreshStatus() {
+async function refreshStatus({ fresh = false } = {}) {
   if (refreshing) { log("refresh already in flight, skipped"); return; }
   refreshing = true;
   show("out-status", "Querying Esplora…");
   try {
     const c = needContract();
-    lastInstances = await loadInstances();
+    lastInstances = await loadInstances(fresh);
+    for (const i of lastInstances) awaitedTxids.delete(i.txid);
     renderInstances(lastInstances);
     const total = lastInstances.reduce((n, i) => n + i.value, 0n);
     const blind = lastInstances.filter((i) => i.blinded).length;
@@ -1353,7 +1380,8 @@ async function refreshStatus() {
         "\n" + EXPLORER_ADDR + c.address.toString()
       : "No live instances at " + c.address.toString() +
         "\n" + EXPLORER_ADDR + c.address.toString() +
-        "\n\nIf you just funded it, wait about a minute for a block.", "");
+        "\n\nIf you just funded it, Esplora can take a moment to see the transaction. " +
+        "A funding sent from this page is checked for again every minute until it appears.", "");
   } catch (e) {
     show("out-status", "Failed: " + errText(e), "err");
     log("status failed:", errText(e));
@@ -1385,7 +1413,7 @@ function freshWitnessUtxo(prevTxHex, vout) {
 // in-flight flag misses. Exactly one claim may occupy that window, page-wide.
 
 // The OK/Cancel handlers are assigned ONCE, here, and route to whichever claim is
-// currently waiting. Re-registering them per dialog is the precise bug in LOG Step 33:
+// currently waiting. Re-registering them per dialog was a real bug here:
 // listeners accumulated on the same buttons and one click fired several claims.
 // Assignment (rather than addEventListener) makes that structurally impossible.
 let pendingConfirm = null;
@@ -1471,6 +1499,15 @@ async function doClaim(inst) {
     const c = needContract();
 
     if (usingHumid()) {
+      // Humid would only find this out by running the contract, as "Jet failed during
+      // execution", which says nothing about keys.
+      if (humidKeyMatches() === false) {
+        throw new Error(
+          "These terms name BENEFICIARY_KEY " + c.params.benkey.slice(0, 16) + "…, but this " +
+          "Humid signs with " + humidKey.slice(0, 16) + "…, so the contract would reject its " +
+          "signature. Claim from the Humid install whose key the terms name."
+        );
+      }
       const warnFull = inst.action === "FullWithdraw"
         ? "\n\nThis closes the allowance. It needs the patched Humid: unpatched, an action " +
           "whose only output is policy-asset change is refused as \"pays nothing\"."
@@ -1511,6 +1548,7 @@ async function doClaim(inst) {
       const sent = !!(result && result.broadcast);
       claimedSomething = sent;
       if (sent) spentPending.add(key);
+      if (sent && inst.action === "PartialWithdraw") awaitInstance(txid);
       show("out-claim",
         (sent
           ? inst.action + " broadcast by Humid."
@@ -1626,6 +1664,7 @@ async function doClaim(inst) {
     const txid = await client.broadcastTx(finalTx);
     claimedSomething = true;
     spentPending.add(key);
+    if (inst.action === "PartialWithdraw") awaitInstance(txid.toString());
     show("out-claim", inst.action + " broadcast.\n" +
       "txid: " + txid.toString() + "\n" + EXPLORER_TX + txid.toString() +
       "\npaid to: " + payoutAddress.toString() +
@@ -1672,6 +1711,16 @@ const HUMID_MANIFEST = "./txmanifest.humid.json";
 
 let signerMode = "page";          // "page" | "humid"
 let humidSessionId = null;
+// The key Humid last reported, kept in memory only: each Humid install has its own wallet,
+// so a key saved across reloads could belong to a different install, which is exactly how
+// a stale BENEFICIARY_KEY gets compiled in.
+let humidKey = null;
+
+// null when it can't tell (no key read from Humid yet, or no contract).
+function humidKeyMatches() {
+  if (!humidKey || !contract) return null;
+  return contract.params.benkey === humidKey;
+}
 let humidManifest = null;
 
 const usingHumid = () => signerMode === "humid";
@@ -1679,10 +1728,28 @@ const usingHumid = () => signerMode === "humid";
 for (const radio of document.querySelectorAll('input[name="signer"]')) {
   radio.onchange = () => {
     signerMode = radio.value;
+    forgetOtherSigner();
     $("humid-box").hidden = !usingHumid();
     log("signer mode:", signerMode);
     updateUi();
   };
+}
+
+// The two signers have different keys and so different covenants: nothing on screen from
+// the one just left applies to the other, and leaving it there reads as if it did (a
+// faucet result looks like Humid being funded). Clear the results and the loaded
+// contract; the typed-in fields stay, so switching back costs one Compile.
+function forgetOtherSigner() {
+  for (const id of ["out-wallet", "out-compile", "out-fund", "out-terms", "out-terms-in",
+                    "out-status", "out-claim", "out-key"]) {
+    show(id, "", "");
+  }
+  $("terms").value = "";
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+  pollStartedAt = 0;
+  contract = null;
+  lastInstances = [];
+  $("instances").hidden = true;
 }
 
 async function humidRequest(method, params) {
@@ -1827,6 +1894,7 @@ $("btn-humid-key").onclick = async () => {
   show("out-humid", "Asking Humid for its wallet descriptor…");
   try {
     const { xonly, descriptor } = await humidBeneficiaryKey();
+    humidKey = xonly;
     $("benkey").value = xonly;
     flash("benkey");
     updateHints();
@@ -2018,9 +2086,18 @@ function updateUi() {
   }
 
   if (usingHumid()) {
-    fact("f-can-withdraw", hasContract
-      ? "via Humid: it signs, so this page cannot verify the key matches"
-      : "no allowance loaded yet", hasContract ? "ok" : "no");
+    const match = humidKeyMatches();
+    if (!hasContract) {
+      fact("f-can-withdraw", "no allowance loaded yet", "no");
+    } else if (match === null) {
+      fact("f-can-withdraw",
+        "unknown: press “Get my key from Humid” to check these terms against Humid's key", "no");
+    } else if (match) {
+      fact("f-can-withdraw", "yes: these terms name the key this Humid signs with", "ok");
+    } else {
+      fact("f-can-withdraw",
+        "no: these terms name a different key from this Humid's, so it can't withdraw", "alert");
+    }
   } else if (!hasContract) {
     fact("f-can-withdraw", "no allowance loaded yet", "no");
   } else if (!benKeypair) {
@@ -2043,7 +2120,11 @@ function updateUi() {
     b.disabled = !enabled;
     b.title = enabled ? "" : why;
   };
-  $("wallet-humid-note").hidden = !usingHumid();
+  // Show only what the selected signer uses. Everything marked data-signer="page" is
+  // the in-page wallet and key, which Humid never touches, and the reverse.
+  for (const el of document.querySelectorAll("[data-signer]")) {
+    el.hidden = el.dataset.signer !== signerMode;
+  }
   set("btn-sync", hasWallet && !usingHumid(),
       usingHumid() ? "Humid holds its own funds; this wallet is unused." : "Open a wallet on the benefactor tab first.");
   set("btn-faucet", hasWallet && !usingHumid(),
@@ -2153,6 +2234,11 @@ const POLL_GIVE_UP_MS = 3600000;
 function pollDelayMs() {
   const unconfirmed = lastInstances.some((i) => !i.confirmed);
   if (unconfirmed) return 60000;
+  // A broadcast this page made that Esplora doesn't reflect yet: an instance it still
+  // lists as unspent, or a new one (a funding, or a continuation) it doesn't list yet.
+  // Either way the list is about to change, so keep checking.
+  if (lastInstances.some((i) => spentPending.has(i.txid + ":" + i.vout))) return 60000;
+  if (awaitingHere()) return 60000;
   const waits = lastInstances
     .filter((i) => !i.ready && !i.blinded && contract)
     .map((i) => Math.max(1, contract.params.mindist - i.depth));

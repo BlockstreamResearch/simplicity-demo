@@ -6,7 +6,7 @@ that drives the extension directly.
 
 ```
 txmanifest.json              the manifest, in Humid's 0.1.0 dialect
-allowance.simf               the contract, byte-identical to ../../contracts/allowance.simf
+allowance.simf               the contract: ../../contracts/allowance.simf minus its annotation markers
 humid-allowance-fixes.patch  two fixes Humid needs to run this contract at all
 dapp-demo.html               an earlier demo page, superseded by ../allowance-humid-only/
 HUMID-BUGS.md                the bugs and capability gaps found against Humid
@@ -43,11 +43,13 @@ rejects it. Step 3 of the HOWTO covers the same ground in sequence.
 
 ## How this manifest differs from `examples/allowance/txmanifest.json`
 
-Both describe the same contract. `examples/allowance/` is dialect `0.2.0`, read by
+Both describe the same contract. `examples/allowance/` is dialect `0.3.0`, read by
 `tx-manifest-wallet`; this one is `0.1.0`, read by `@humid/tx-manifest`. The differences
 are conventions of the reader, not changes to what the contract does.
 
-- **`"manifest_version": "0.1.0"`, not `"0.2.0"`.** Humid's fixtures use `0.1.0`.
+- **`"manifest_version": "0.1.0"`, not `"0.3.0"`.** Humid's fixtures use `0.1.0`.
+- **No `"requires": ["simplicity"]`.** `0.3.0` makes it mandatory for a covenant
+  manifest; Humid's `0.1.0` reader doesn't know the field.
 - **`"confidential": false` on `utxo_types.allowance`.** Every Humid fixture declares
   this. It is not load-bearing for safety: `evaluation/plan.ts` always passes
   `unblindable: "covenant"` for any output whose destination is a covenant `utxo_type`,
@@ -72,7 +74,7 @@ are conventions of the reader, not changes to what the contract does.
   against the real output position rather than parsing and ignoring it.
 
 Validating this manifest against `examples/allowance/txmanifest.schema.json` reports one
-error, on `confidential`. That schema describes the `0.2.0` dialect only, which permits
+error, on `confidential`. That schema describes the `0.3.0` dialect only, which permits
 `confidential` on an output but not on a utxo type. `REFERENCE.md` covers the divergence.
 
 ## Checking a manifest without the extension
@@ -259,7 +261,7 @@ pointing it at `liquid.network`, which has gentler rate limits.
   constrains output 1's identity or amount, so an auto-placed change output landing there
   is fine. A contract that did pin output 1's value exactly would need the real `fee`
   keyword, so this is a fit to one contract's shape rather than a general substitute.
-- **The two implementations have already diverged.** This contract's manifest is `0.2.0`
+- **The two implementations have already diverged.** This contract's manifest is `0.3.0`
   for `stringhandler/txmanifest-wallet` and `0.1.0` for Humid, and they disagree on at
   least one schema detail, namely where `confidential` may appear.
 - **Humid's fixture corpus disagrees with itself in both directions.** For the same three

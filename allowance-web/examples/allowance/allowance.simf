@@ -45,7 +45,7 @@ fn same_asset(x: (Asset1, Amount1), y: (Asset1, Amount1)) -> (u64, u64) {
     // library.
     let (x_asset, x_amount): (Asset1, Amount1) = x;
     let (y_asset, y_amount): (Asset1, Amount1) = y;
-    let x_asset_id: u256 = unwrap_right::<(u1, u256)>(x_asset);// (1)!
+    let x_asset_id: u256 = unwrap_right::<(u1, u256)>(x_asset);
     let y_asset_id: u256 = unwrap_right::<(u1, u256)>(y_asset);
     assert!(jet::eq_256(x_asset_id, y_asset_id));
     (unwrap_right::<(u1, u256)>(x_amount), unwrap_right::<(u1, u256)>(y_amount))
@@ -59,10 +59,10 @@ fn recursive_covenant() {
     // Output 2: the fee (Elements has explicit fee outputs)
     // Disallow further outputs.
     assert!(jet::eq_32(jet::num_outputs(), 3));
-    let this_script_hash: u256 = jet::current_script_hash();// (2)!
+    let this_script_hash: u256 = jet::current_script_hash();
     let output_script_hash: u256 = unwrap(jet::output_script_hash(0));
     assert!(jet::eq_256(this_script_hash, output_script_hash));
-    assert!(unwrap(jet::output_is_fee(2)));// (3)!
+    assert!(unwrap(jet::output_is_fee(2)));
 }
 
 fn full_withdrawal() -> bool {
@@ -70,7 +70,7 @@ fn full_withdrawal() -> bool {
     // remaining funds? (return true or false)
     let (_, available_amount): (Asset1, Amount1) = jet::current_amount();
     let explicit_amount: u64 = unwrap_right::<(u1, u256)>(available_amount);
-    jet::le_64(explicit_amount, param::ALLOWANCE_AMOUNT)// (4)!
+    jet::le_64(explicit_amount, param::ALLOWANCE_AMOUNT)
 }
 
 fn partial_withdrawal() {
@@ -88,7 +88,7 @@ fn partial_withdrawal() {
         same_asset(jet::current_amount(), unwrap(jet::output_amount(0)));
 
     // Subtract
-    let (borrow, difference): (bool, u64) = jet::subtract_64(remaining_amount, param::ALLOWANCE_AMOUNT);// (5)!
+    let (borrow, difference): (bool, u64) = jet::subtract_64(remaining_amount, param::ALLOWANCE_AMOUNT);
     // Ensure calculated amount did not go negative.
     assert!(not(borrow));
     // Ensure retained amount is large enough.
@@ -134,7 +134,7 @@ fn enforce_relative_distance(min_distance: Distance) {
     assert!(jet::le_32(2, jet::version()));
 
     // Fetch and parse sequence
-    let actual_data: Either<Distance, Duration> = unwrap(jet::parse_sequence(jet::current_sequence()));// (6)!
+    let actual_data: Either<Distance, Duration> = unwrap(jet::parse_sequence(jet::current_sequence()));
     let actual_distance: Distance = unwrap_left::<Duration>(actual_data);
 
     assert!(jet::le_16(min_distance, actual_distance));

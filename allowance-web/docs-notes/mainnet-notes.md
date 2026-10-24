@@ -1,7 +1,7 @@
 # Deploying the allowance contract to Liquid mainnet: what would change
 
 This project targets Liquid **testnet** only; nothing here is executed against
-mainnet, and this repo has no mainnet code path (see `webapp/API.md`). This is a
+mainnet, and this repo has no mainnet code path. This is a
 reasoned checklist of what deploying for real would require, written because neither
 docs.simplicity-lang.org nor docs.liquid.net publishes a migration checklist (a
 documentation gap; see `logs/LOG.md` Step 2/3(B)).

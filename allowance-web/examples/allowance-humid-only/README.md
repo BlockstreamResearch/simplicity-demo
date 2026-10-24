@@ -19,15 +19,15 @@ the contract both need a real origin.
 That's it. No `wasm-pack`, no Rust, no `--features simplicity`, no `vendor/` directory,
 no `npm install`, no bundler.
 
-Two requirements on the Humid side, both of which will otherwise waste your time:
+One requirement on the Humid side, which will otherwise waste your time:
 
 - **The patch** (`../allowance-humid/humid-allowance-fixes.patch`), applied to your Humid
   checkout and rebuilt. It fixes two upstream bugs: without the first, every withdrawal is
   refused as `unimplemented-construct`; without the second, `FullWithdraw` fails as
   "pays nothing, so there is nothing to build".
-- **Tick `processConfidentialTransaction` on Humid's "Connect this dapp?" screen.** That
-  checklist starts with nothing selected and there is a second per-method grant check, so
-  without it every single action raises its own extra prompt.
+
+Every action also shows Humid's own "Perform a contract action?" confirmation. That is
+where you approve each transaction, not a sign of a missing permission.
 
 The whole lifecycle is confirmed working through a real patched Humid, with real
 transactions on Liquid testnet: `Fund`, `PartialWithdraw`, and `FullWithdraw` closing an

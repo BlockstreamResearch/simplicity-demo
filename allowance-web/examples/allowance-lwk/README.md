@@ -142,7 +142,7 @@ reads `manifest_version` but never validates it (`corpus.test.ts` deletes the fi
 it isn't load-bearing), and `document/registry.ts` (a machine-readable list of which fields
 it reads, shows, ignores or hasn't implemented) accepts both the `contract_templates` and
 the older `classes` container. Every field in `txmanifest.humid.json` is one this build
-reads, with no unknown or ignored keys. So the `0.1.0`-versus-`0.2.0` difference against
+reads, with no unknown or ignored keys. So the `0.1.0`-versus-`0.3.0` difference against
 `tx-manifest-wallet` is cosmetic for Humid's purposes.
 
 ## Running it as two separate parties
@@ -261,8 +261,8 @@ whose covenant value *didn't* have to be public would get far more from it.
   The Waterfalls operator learns the wallet's addresses.
 - **One claim at a time, page-wide.** Every Claim button disables while any claim is in
   flight, and status refreshes guard against overlapping. A per-row lock alone is not
-  enough; see `logs/LOG.md` Steps 32-33, where a single click could submit twice and the
-  second attempt came back as `insufficient fee, rejecting replacement`. That error means
+  enough: a single click could submit twice, and the second attempt came back as
+  `insufficient fee, rejecting replacement`. That error means
   the *first* attempt already reached the mempool, so the withdrawal probably succeeded;
   the page says so rather than reporting a bare failure.
 - **Fees come out of the allowance.** `enforce_single_input()` permits exactly one input,
