@@ -7,8 +7,8 @@
 // describes four more already-written tests (not included here, to keep this
 // file small) and several genuinely unwritten ones, if you want more.
 
-use allowance_example::artifacts::allowance::AllowanceProgram;
-use allowance_example::artifacts::allowance::derived_allowance::{AllowanceArguments, AllowanceWitness};
+use simplex_allowance_example::artifacts::allowance::AllowanceProgram;
+use simplex_allowance_example::artifacts::allowance::derived_allowance::{AllowanceArguments, AllowanceWitness};
 
 use simplex::constants::DUMMY_SIGNATURE;
 use simplex::provider::{ProviderError, SimplicityNetwork};

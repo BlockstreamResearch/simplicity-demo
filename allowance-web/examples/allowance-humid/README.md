@@ -84,9 +84,10 @@ runs the same reader the extension uses (`inspectManifestDocument` from
 `@humid/tx-manifest`), entirely client-side, with no wallet or network call. It is the
 cheapest way to check that a manifest and contract source are accepted at all.
 
+From `allowance-web`, with Humid cloned there as in Step 3c of the HOWTO:
+
 ```
-cd ~/src/humid
-bun run web:dev
+(cd humid && bun run web:dev)
 ```
 
 1. Open the dev server in a browser and click through from the home screen to "Manifest
@@ -195,12 +196,13 @@ derivation in about 75 lines, including a CKDpub helper.
 
 ## Running `dapp-demo.html`
 
+From `allowance-web`:
+
 ```
-cd examples/allowance-humid
-python3 -m http.server 8099
+python3 -m http.server 8098 --directory examples/allowance-humid
 ```
 
-Then open `http://localhost:8099/dapp-demo.html` in the browser profile Humid is installed
+Then open `http://localhost:8098/dapp-demo.html` in the browser profile Humid is installed
 in. Serving over HTTP rather than opening the file as `file://` avoids inconsistent
 browser handling of `fetch()` between sibling local files; the content script matches
 `http://` the same as `file://`.
