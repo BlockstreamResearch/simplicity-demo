@@ -6,7 +6,7 @@ that drives the extension directly.
 
 ```
 txmanifest.json              the manifest, in Humid's 0.1.0 dialect
-allowance.simf               the contract: ../../contracts/allowance.simf minus its annotation markers
+allowance.simf               the contract: a copy of ../../contracts/allowance.simf
 humid-allowance-fixes.patch  two fixes Humid needs to run this contract at all
 dapp-demo.html               an earlier demo page, superseded by ../allowance-humid-only/
 HUMID-BUGS.md                the bugs and capability gaps found against Humid

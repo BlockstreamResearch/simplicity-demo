@@ -5,8 +5,7 @@ self-contained project of their own; see Step 2 of [the HOWTO](../../HOWTO.md) f
 the walkthrough (install Simplex, scaffold a project, copy these two files
 in, build, test).
 
-- `simf/allowance.simf`: this repo's own `contracts/allowance.simf`, without the
-  `// (N)!` annotation markers that docs.simplicity-lang.org renders.
+- `simf/allowance.simf`: a copy of this repo's own `contracts/allowance.simf`.
 - `tests/allowance_test.rs`: two integration tests against a real local Elements
   regtest node, exercising the contract through Simplex's real signing/broadcast
   API rather than reimplementing any of it by hand. Chosen to show two
