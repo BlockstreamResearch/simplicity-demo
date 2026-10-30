@@ -295,7 +295,7 @@ Not counted in the tally above since it's a missing feature, not a defect. No sc
 anywhere in Humid shows a raw public key, which a beneficiary needs to hand to a
 benefactor out of band for any pubkey-gated covenant. Workaround: the already-public
 `getWalletDescriptor` RPC returns the account xpub (`elwpkh([fingerprint/84h/1h/0h]
-xpub.../0/*)`, confirming the account is plain BIP-84 segwit v0, not Taproot), from
+xpub.../0/*)`, confirming the account is plain BIP84 segwit v0, not Taproot), from
 which the concrete child pubkey can be derived with a standard non-hardened BIP32
 `CKDpub` (`/0/0` for the first receive address). Decoding Humid's own receive address
 client-side is *not* a shortcut here — P2WPKH's witness program is `HASH160(pubkey)`,

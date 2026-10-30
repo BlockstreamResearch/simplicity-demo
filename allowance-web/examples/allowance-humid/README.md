@@ -182,7 +182,7 @@ handing one over, so recover it from `getWalletDescriptor` plus a BIP32 child de
    `descriptorFormat: [{format: "bip380-split-branches"}]`. The response's
    `descriptors[0].branchDescriptors` holds
    `elwpkh([<fingerprint>/84h/1h/0h]<xpub>/0/*)` for the external chain and `.../1/*)`
-   for the internal one: plain BIP-84 segwit v0, not Taproot.
+   for the internal one: plain BIP84 segwit v0, not Taproot.
 2. The xpub is already at `m/84'/1'/0'`. Derive two more **non-hardened** steps, `/0` for
    the external chain then `/0` for the first address index, to reach the account's first
    receive pubkey.

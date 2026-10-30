@@ -88,17 +88,15 @@
 <h1>Allowance covenant <span class="role" id="signer-chip">in-page signing</span></h1>
 <p class="sub">A benefactor locks testnet LBTC in a Simplicity covenant; a beneficiary
 withdraws a fixed amount, no more often than once every N blocks, until it is empty.
-Everything can run in this page (contract compilation, signing and broadcasting) with no
-backend and no browser extension, or the same contract can be handed to a wallet as a
-txmanifest.</p>
+This page can compile the contract, sign and broadcast by itself, or hand the same contract
+to the Humid wallet extension as a txmanifest.</p>
 
 
 <section>
   <h2>Library</h2>
-  <p class="note">Loaded automatically when this page opens: <code>vendor/lwk_wasm.js</code>,
-  the wasm it initialises, and a check that this build really has the Simplicity feature
-  compiled in. It also restores whatever this browser already knew, including your key,
-  your terms and your payout address, so a reload puts you back where you were.</p>
+  <p class="note">Loads automatically: <code>vendor/lwk_wasm.js</code>, the wasm it
+  initializes, and a check that the build includes the Simplicity feature. It then restores
+  the key, terms and payout address this browser saved.</p>
   <div class="out" id="out-load"></div>
 </section>
 
@@ -118,9 +116,9 @@ txmanifest.</p>
 
 <section>
   <h2>Who signs</h2>
-  <p class="note">Two ways to run the same contract. They are not interchangeable for a single
-  allowance: Humid signs with its own BIP-84 key, so <code>BENEFICIARY_KEY</code>, and
-  therefore the covenant address, differs between them. Pick one before compiling.</p>
+  <p class="note">Two ways to run the same contract. Humid signs with its own BIP84 key, so
+  <code>BENEFICIARY_KEY</code>, and therefore the covenant address, differs between them.
+  Pick one before compiling.</p>
   <label><input type="radio" name="signer" value="page" checked> <strong>This page</strong>:
   <code>lwk_wasm</code> compiles, signs and broadcasts here; keys live in this browser's
   <code>localStorage</code>.</label>
@@ -129,21 +127,17 @@ txmanifest.</p>
   and broadcasting itself, showing you its own confirmation.</label>
   <div id="humid-box" hidden>
     <p class="note">Humid reads <code>txmanifest.humid.json</code> from this directory
-    (<code>manifest_version 0.1.0</code>, its own dialect) rather than anything this page
-    builds. It doesn't need a wallet here, since it holds its own funds and its own key, but it does
-    need <code>examples/allowance-humid/humid-allowance-fixes.patch</code> applied. Without
+    (<code>manifest_version 0.1.0</code>) and holds its own funds and key. It needs
+    <code>examples/allowance-humid/humid-allowance-fixes.patch</code> applied. Without
     it every withdrawal is refused with <code>unimplemented-construct</code>, and the last one,
     a <code>FullWithdraw</code>, with <em>"pays nothing, so there is nothing to build"</em>.</p>
     <p class="note"><strong>Fund Humid itself before pressing Fund.</strong> Send testnet coins
     to the receive address shown in the extension, for example through the
     <a href="https://liquidtestnet.com/faucet" target="_blank" rel="noopener">faucet web
-    form</a>, and wait for them to confirm. This page's own wallet and faucet button are not
-    used on this path.</p>
-    <p class="note">Approve Humid's “Connect this dapp?” prompt when it appears. Every Fund
-    and claim then shows Humid's own “Perform a contract action?” confirmation: that is
-    where you review and approve each transaction. Connecting only re-prompts when the
-    session is actually gone, which, given the extension's worker lifecycle and auto-lock,
-    is often.</p>
+    form</a>, and wait for them to confirm.</p>
+    <p class="note">Approve Humid's “Connect this dapp?” prompt when it appears. It returns
+    whenever Humid locks or restarts. Every Fund and claim then shows Humid's own “Perform a
+    contract action?” confirmation, where you review and approve the transaction.</p>
     <button id="btn-humid-detect" class="secondary">Check for Humid</button>
     <button id="btn-humid-key" class="secondary">Get my key from Humid</button>
     <div class="out" id="out-humid"></div>
@@ -156,18 +150,16 @@ txmanifest.</p>
   <button class="tab-btn" data-tab="about">How this works</button>
 </div>
 
-<p class="note" style="margin: -8px 0 16px;">These tabs are two views of the same demo, not
-two identities: switching them changes what you are looking at, never what you can do. What
-you can actually do depends on what is in this browser, which is what “can fund” and “can
-withdraw” above report. One browser profile can hold both sides; two profiles is how you get
-two genuinely separate parties.</p>
+<p class="note" style="margin: -8px 0 16px;">Switching tabs changes only what you see. What
+this browser can do is shown under “can fund” and “can withdraw” above. One browser profile
+can play both parties; use two profiles to keep them separate.</p>
 
 <!-- ========================= BENEFACTOR ========================= -->
 <div id="tab-benefactor" class="tab-panel">
 
 <section data-signer="page">
   <h2>Your wallet</h2>
-  <p class="note">A single-key LWK wallet from a BIP-39 mnemonic kept in this browser's
+  <p class="note">A single-key LWK wallet from a BIP39 mnemonic kept in this browser's
   <code>localStorage</code>, in plaintext. Testnet play money only. Never put a real
   mnemonic here.</p>
   <label for="mnemonic">Mnemonic (leave blank to generate one)</label>
@@ -175,17 +167,16 @@ two genuinely separate parties.</p>
   <button id="btn-wallet">Open wallet</button>
   <button id="btn-sync" class="secondary">Sync &amp; show balance</button>
   <button id="btn-faucet" class="secondary">Request testnet funds</button>
-  <span class="hint-inline">The faucet doesn't send any CORS headers, so this page can
-  dispatch the request but cannot read the reply, and checks your balance a minute later
-  instead.</span>
+  <span class="hint-inline">The page can't read the faucet's reply, so it checks your
+  balance a minute later instead.</span>
   <div class="out" id="out-wallet"></div>
 </section>
 
 <section>
   <h2>Choose the allowance terms</h2>
   <p class="note">These three values are compiled <em>into</em> the contract, so they also
-  determine its address. They cannot be changed afterwards: a different value is a different,
-  unrelated allowance at a different address.</p>
+  determine its address. A different value gives a different, unrelated allowance at a
+  different address.</p>
   <label for="benkey">Beneficiary's public key (they send you this)</label>
   <input type="text" id="benkey" class="mono" placeholder="64 hex characters (BIP340 x-only pubkey)">
   <span class="hint-inline" id="hint-benkey"></span>
@@ -209,9 +200,8 @@ two genuinely separate parties.</p>
 <section>
   <h2>Fund it</h2>
   <p class="note">Pays an <strong>explicit</strong> (unblinded) output to the covenant address.
-  That is not a stylistic choice: the contract reads its own amount, so a confidential output
-  here can never be spent and the funds are lost permanently. Leave broadcast unchecked the
-  first time to see what would be built.</p>
+  The contract reads its own amount, so a confidential output here can never be spent. Leave
+  broadcast unchecked the first time to see what would be built.</p>
   <label for="fundamt">Amount to lock (sats)</label>
   <input type="number" id="fundamt" value="8000" min="1">
   <span class="hint-inline" id="hint-fundamt"></span>
@@ -222,10 +212,9 @@ two genuinely separate parties.</p>
 
 <section>
   <h2>Hand the terms to the beneficiary</h2>
-  <p class="note">Nothing here is secret, and there is no protocol for it, so send it however
-  you like. The beneficiary's page re-derives the address from the three parameters and
-  refuses to go on if it disagrees with the address below, so garbled or altered terms are
-  caught before anyone funds the wrong covenant.</p>
+  <p class="note">Nothing here is secret, so send it however you like. The beneficiary's page
+  re-derives the address from the three values and refuses terms whose address doesn't
+  match.</p>
   <textarea id="terms" rows="5" placeholder="compile the contract and this fills in"></textarea>
   <button id="btn-terms-copy" class="secondary">Copy</button>
   <div class="out" id="out-terms"></div>
@@ -239,16 +228,12 @@ two genuinely separate parties.</p>
 <section data-signer="page">
   <h2>Your key</h2>
   <p class="note">The contract's <code>BENEFICIARY_KEY</code> is a BIP340 x-only public key,
-  and the only way to withdraw is a signature by its private half. Strictly this needs a
-  <em>signer</em>, not a wallet, but in practice a signer almost always comes in the form of
-  a wallet, and treating the two as interchangeable is reasonable outside a demo. This page
-  takes the shortcut: a bare Schnorr keypair, no derivation, no descriptor.</p>
+  and the only way to withdraw is a signature by its private half. This page holds it as a
+  bare Schnorr keypair, separate from the wallet.</p>
   <p class="warning"><strong>This key is not covered by your wallet's mnemonic.</strong> It is
-  32 random bytes in this browser's <code>localStorage</code> and nothing else. Writing down
-  the twelve words does <em>not</em> back it up: clear this site's data and any allowance
-  made out to this key becomes permanently unclaimable, even though the wallet itself would
-  survive. Copy the secret below somewhere safe if an allowance is funded to it, or treat the
-  whole thing as disposable testnet play.</p>
+  32 random bytes in this browser's <code>localStorage</code>. Clear this site's data and any
+  allowance made out to this key becomes permanently unclaimable. Copy the secret somewhere
+  safe if an allowance you care about is funded to it.</p>
   <button id="btn-key">Generate / show my key</button>
   <button id="btn-key-secret" class="secondary">Reveal secret key (for backup)</button>
   <div class="out" id="out-key"></div>
@@ -256,19 +241,16 @@ two genuinely separate parties.</p>
 
 <section>
   <h2>Load the allowance</h2>
-  <p class="note">Paste what the benefactor sent you. You need no funds and no file they
-  created: the address is derived from the terms, and the current UTXO is found by looking at
-  the chain. What you do need is a <em>signer</em> for the key above; this page uses a bare
-  keypair, but in any real deployment that signer would be a wallet, since that is where keys
-  live.</p>
+  <p class="note">Paste what the benefactor sent you. You don't need any funds: the page
+  derives the address from the terms and finds the allowance on the chain.</p>
   <textarea id="terms-in" rows="5" placeholder='{"v":1,"BENEFICIARY_KEY":"...","ALLOWANCE_AMOUNT":"5000","MIN_DISTANCE":3,"address":"tex1p..."}'></textarea>
   <button id="btn-terms-load">Load</button>
   <div class="out" id="out-terms-in"></div>
   <p class="warning" id="warn-key" hidden></p>
   <details>
     <summary>Or type the terms in by hand</summary>
-    <p class="note">Same three values, if the blob is inconvenient to move. Fill these in and
-    press Load; the fields are shared with the benefactor tab.</p>
+    <p class="note">The same three values. These fields are shared with the benefactor
+    tab.</p>
     <label for="benkey-manual">Beneficiary public key (yours)</label>
     <input type="text" id="benkey-manual" class="mono" placeholder="64 hex">
     <div class="row">
@@ -288,7 +270,7 @@ two genuinely separate parties.</p>
 <section>
   <h2>Withdraw</h2>
   <p class="note">Every UTXO at the covenant address is an independent allowance with its own
-  timelock. They are never summed and can never be merged. Each is labelled with the action
+  timelock, and they can never be merged. Each is labeled with the action
   its current balance makes valid: <code>PartialWithdraw</code> while there is more than one
   period left, <code>FullWithdraw</code> for the last one, which closes it.</p>
   <div data-signer="page">
@@ -299,9 +281,9 @@ two genuinely separate parties.</p>
   and shows its own confirmation before signing.</p>
   <label><input type="checkbox" id="wd-dryrun"> Dry run: build and sign, but do not
   broadcast</label>
-  <span class="hint-inline">Worth doing once per allowance: it exercises the whole path
-  (compile, sighash, signature, and the contract's own execution) without spending anything. A
-  failure here is the contract or the manifest refusing, not the network.</span>
+  <span class="hint-inline">Runs the whole path (compile, sighash, signature, and the
+  contract itself) without spending anything. A failure here comes from the contract or the
+  manifest, not the network.</span>
   <button id="btn-status">Refresh status</button>
   <button id="btn-payout-mine" class="secondary" data-signer="page">Use my wallet address</button>
   <button id="btn-copy-address" class="secondary">Copy covenant address</button>
@@ -321,7 +303,7 @@ two genuinely separate parties.</p>
 <section>
   <h2>How this works</h2>
 
-  <h3>What the contract actually enforces</h3>
+  <h3>What the contract enforces</h3>
   <p>Three values are fixed at compile time and baked into the address:
   <code>BENEFICIARY_KEY</code>, <code>ALLOWANCE_AMOUNT</code> and <code>MIN_DISTANCE</code>.
   Every spend needs a BIP340 signature by the beneficiary's key, a BIP68 relative timelock of
@@ -340,36 +322,27 @@ two genuinely separate parties.</p>
   a fee can never be emptied.</p>
 
   <h3>Why funding must be unblinded</h3>
-  <p>Liquid blinds asset and amount by default, and that is the better default in general. But
-  this contract reads its own balance and output 0's amount, which is only possible against
-  explicit values, and fails outright otherwise. So the covenant's own outputs must be
-  explicit. Output 1, the payout, is never inspected by the contract and could be blinded;
-  this page keeps it explicit only to avoid a blinding pass. The asymmetry worth remembering:
-  getting this wrong on a covenant output strands the funds silently and forever, while
-  getting it wrong elsewhere merely raises an error.</p>
+  <p>Liquid blinds asset and amount by default. This contract reads its own balance and
+  output 0's amount, which works only on explicit values, so the covenant's own outputs must
+  be explicit. A confidential output sent to the covenant address can never be spent, and
+  nothing warns you when it is sent. The payout output isn't inspected by the contract.</p>
 
-  <h3>Why this page has to index the chain itself</h3>
-  <p>Neither LWK nor any Simplicity wallet offers "list the UTXOs at this address and tell me
-  which are spendable." That lookup is the application's job, so this page does it directly
-  against Esplora: list the UTXOs, read the chain tip, and compare each UTXO's balance against
-  <code>ALLOWANCE_AMOUNT</code> and its confirmation depth against <code>MIN_DISTANCE</code>.
-  Any real application of a covenant like this needs the same thing.</p>
-
-  <h3>Why refreshing is slow on purpose</h3>
-  <p>The Esplora instance here is a shared public service nobody in this project operates, and
-  it rate-limits hard, refusing everything for minutes after a burst. So automatic refreshing
-  is paced against how long there is actually left to wait, pauses when the tab is hidden,
-  backs off when a response is slow or refused, and stops altogether after an hour. Press
-  Refresh whenever you want an answer sooner.</p>
-  <p>Wallet syncs don't touch that instance. They go to a Waterfalls server, which returns
-  the wallet's whole history in a single request. The cost is that the Waterfalls operator
-  learns which addresses belong to the wallet.</p>
+  <h3>How the page finds allowances</h3>
+  <p>The page lists the UTXOs at the covenant address through Esplora, reads the chain tip,
+  and compares each UTXO's balance with <code>ALLOWANCE_AMOUNT</code> and its confirmation
+  depth with <code>MIN_DISTANCE</code>. Neither LWK nor a wallet does this lookup, so an
+  application of a covenant like this has to do it itself.</p>
+  <p>The page refreshes on its own only while something is pending: about once a minute while
+  a transaction confirms, less often during a long timelock. It pauses while the tab is
+  hidden, backs off when Esplora is slow or refuses, and stops after an hour. Press Refresh
+  status for an answer sooner.</p>
+  <p>Wallet syncs go to a Waterfalls server instead, which returns the wallet's whole
+  history in one request. The Waterfalls operator learns which addresses belong to the
+  wallet.</p>
 
   <h3>Keys and custody</h3>
   <p>Both the wallet mnemonic and the beneficiary's secret key sit in this browser's
-  <code>localStorage</code> in plaintext, and a separate browser profile is how you get a
-  genuinely separate party. That is fine for testnet play money and completely unacceptable
-  for anything else.</p>
+  <code>localStorage</code> in plaintext. Use them only for testnet funds.</p>
 </section>
 
 </div>
@@ -705,9 +678,9 @@ $("btn-faucet").onclick = async () => {
 
     show("out-wallet",
       "Request sent for\n" + addr +
-      "\n\nThe faucet's reply cannot be read from a web page, so this is not a " +
-      "confirmation. Checking your balance in about a minute. If nothing arrives, ask " +
-      "for it by hand at https://liquidtestnet.com/faucet or with your own faucet tool.",
+      "\n\nThe page can't read the faucet's reply, so this is not a confirmation. " +
+      "Checking your balance in about a minute. If nothing arrives, use " +
+      "https://liquidtestnet.com/faucet by hand.",
       "");
 
     // One check, timed for about one block.
@@ -792,7 +765,7 @@ $("btn-key-secret").onclick = () => {
 $("btn-usemine").onclick = () => {
   try {
     $("benkey").value = loadBeneficiaryKey().xOnlyPublicKey.toString();
-    show("out-compile", "Filled in your own key: you are both parties, which is fine for a single-wallet test.", "");
+    show("out-compile", "Filled in your own key: you are both parties.", "");
   } catch (e) {
     show("out-compile", "Failed: " + errText(e), "err");
   }
@@ -851,11 +824,8 @@ $("btn-compile").onclick = async () => {
       (params.mindist < 90 ? params.mindist + " minutes" : hours + " hours") +
       " between withdrawals." +
       (params.mindist > 60
-        ? " That is a realistic figure but a slow demo. Try 3 if you just want to see " +
-          "the lifecycle work."
-        : "") +
-      "\n\nThis address depends on all three params: change any of them and it is a " +
-      "different, unrelated allowance.", "");
+        ? " That makes a slow demo. Try 3 to see the whole lifecycle quickly."
+        : ""), "");
     if (usingHumid() && humidKeyMatches() === false) {
       show("out-compile", $("out-compile").textContent +
         "\n\nThis key is not the one Humid last reported (" + humidKey.slice(0, 16) + "…). " +
@@ -1170,8 +1140,8 @@ $("btn-fund").onclick = async () => {
     const txid = await client.broadcast(finalPset);
     show("out-fund", "Broadcast: " + txid.toString() +
       "\n" + EXPLORER_TX + txid.toString() +
-      "\n\nIt will appear below as a new allowance instance once it confirms. The page " +
-      "is now checking for it periodically, so you do not need to refresh by hand.", "");
+      "\n\nIt appears on the beneficiary tab as a new allowance instance once it " +
+      "confirms. The page checks for it automatically.", "");
     log("funded, txid", txid.toString());
     awaitInstance(txid.toString());
     walletBalanceSats = null;          // stale now
@@ -1341,9 +1311,8 @@ function renderInstances(instances) {
       ? "A spend of this instance has been broadcast. It leaves this list once the chain " +
         "catches up; a partial withdrawal's continuation appears in its place."
       : inst.blinded
-      ? "This is a confidential output. The contract's only spending path reads its own " +
-        "asset and amount directly, which works on an explicit output only, so these " +
-        "funds cannot be withdrawn by anyone. Fund the address with an explicit output."
+      ? "A confidential output. The contract can read only explicit amounts, so nobody " +
+        "can withdraw these funds."
       : mine === false
       ? "This browser does not hold the contract's BENEFICIARY_KEY, so it cannot sign a withdrawal."
       : !inst.confirmed
@@ -1373,8 +1342,8 @@ async function refreshStatus({ fresh = false } = {}) {
     const blind = lastInstances.filter((i) => i.blinded).length;
     show("out-status", lastInstances.length
       ? lastInstances.length + " instance(s) at " + c.address.toString() +
-        "\nholding " + total + " sats in total: separate allowances, each with its own " +
-        "timelock, which can never be merged." +
+        "\nholding " + total + " sats in total, as separate allowances with their own " +
+        "timelocks." +
         (blind ? "\n" + blind + " confidential output(s) here cannot be spent by anyone " +
           "and are not counted in that total." : "") +
         "\n" + EXPLORER_ADDR + c.address.toString()
@@ -1484,9 +1453,8 @@ async function doClaim(inst) {
   // Refuse visibly, not just in the log. Clicking a second Claim used to do nothing
   // observable, which invites more clicking.
   if (claimBusy) {
-    show("out-claim", "One withdrawal at a time. Finish or cancel the one already in " +
-      "progress before starting another: two transactions spending the same instance " +
-      "would collide, and the second would be rejected as a replacement.", "warn");
+    show("out-claim", "One withdrawal at a time. Finish or cancel the one in progress " +
+      "first.", "warn");
     log("claim refused, another is busy:", key);
     return;
   }
@@ -1509,16 +1477,15 @@ async function doClaim(inst) {
         );
       }
       const warnFull = inst.action === "FullWithdraw"
-        ? "\n\nThis closes the allowance. It needs the patched Humid: unpatched, an action " +
-          "whose only output is policy-asset change is refused as \"pays nothing\"."
+        ? "\n\nThis closes the allowance. It needs the patched Humid."
         : "";
       show("out-claim", "Waiting for you to confirm…");
       const ok = await askConfirm(
         `action:    ${inst.action}  (via Humid)\n` +
         `spending:  ${inst.txid}:${inst.vout}\n` +
         `balance:   ${inst.value} sats\n\n` +
-        `Humid builds, signs and broadcasts this itself from the manifest, and pays to its ` +
-        `own change address, so the payout field on this page does not apply. It shows its own ` +
+        `Humid builds, signs and broadcasts this itself and pays to its own change ` +
+        `address. It shows its own confirmation next.` +
         (dryRun
           ? `\n\nDRY RUN: broadcast:false, so Humid builds and signs but sends nothing.`
           : "") +
@@ -1755,8 +1722,8 @@ function forgetOtherSigner() {
 async function humidRequest(method, params) {
   if (!window.humid) {
     throw new Error(
-      "window.humid is not present. Humid is not installed, not enabled, or not injecting " +
-      "into this page. Load the extension at chrome://extensions and open this page over " +
+      "window.humid is not present. Humid is not installed, not enabled, or can't reach " +
+      "this page. Load the extension at chrome://extensions and open this page over " +
       "http://, not file://."
     );
   }
@@ -1822,7 +1789,7 @@ async function humidCall(action, extra) {
 }
 
 // Humid has no UI showing your own public key, so derive it from the descriptor it
-// will sign with: a BIP-84 xpub already at m/84'/1'/0', plus two non-hardened steps
+// will sign with: a BIP84 xpub already at m/84'/1'/0', plus two non-hardened steps
 // (external chain, first address). The curve maths comes from a dynamic import so the
 // local-only path keeps working with no network and no CDN.
 async function humidBeneficiaryKey() {
@@ -1876,7 +1843,7 @@ $("btn-humid-detect").onclick = async () => {
     const scopes = (session && session.sessionScopes) || {};
     const live = Object.keys(scopes).length > 0;
     show("out-humid",
-      "Humid is injecting into this page.\n" +
+      "Humid is available on this page.\n" +
       "authorized session for this origin: " + (live ? "yes: " + Object.keys(scopes).join(", ") : "none") +
       "\n\n" + (live
         ? "Actions should go straight through without a connect prompt."
@@ -1901,7 +1868,7 @@ $("btn-humid-key").onclick = async () => {
     show("out-humid",
       "Derived from Humid's own descriptor, so this is the key Humid will sign with:\n" +
       xonly +
-      "\n\nraw descriptor, so the derivation is checkable rather than trusted:\n" +
+      "\n\nthe descriptor it comes from:\n" +
       descriptor +
       "\n\nIt is now in the BENEFICIARY_KEY field. Compile on the benefactor tab to get " +
       "the covenant address for this key.", "");
@@ -2259,8 +2226,8 @@ function schedulePoll() {
   if (!pollStartedAt) pollStartedAt = Date.now();
   if (Date.now() - pollStartedAt > POLL_GIVE_UP_MS) {
     show("out-status", $("out-status").textContent +
-      "\n\nAutomatic refreshing stopped after an hour to stay friendly to the public " +
-      "Esplora instance. Press “Refresh status” when you want an update.", "warn");
+      "\n\nAutomatic refreshing stopped after an hour. Press “Refresh status” for an " +
+      "update.", "warn");
     pollStartedAt = 0;
     return;
   }

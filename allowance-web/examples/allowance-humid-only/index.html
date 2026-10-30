@@ -111,7 +111,7 @@ action?&rdquo; confirmation: that is where you approve each transaction.
 
 <section>
   <h2>1 &middot; Humid</h2>
-  <p class="note">Checks the extension is injecting into this page, and whether a session
+  <p class="note">Checks the extension is available on this page, and whether a session
   already exists. Reading the session does not prompt; creating one does, so this page only
   creates one when a call is actually refused.</p>
   <button id="detect">Check for Humid</button>
@@ -121,7 +121,7 @@ action?&rdquo; confirmation: that is where you approve each transaction.
 <section>
   <h2>2 &middot; Your key<span class="tag">beneficiary</span></h2>
   <p class="note">Humid shows your public key nowhere, so derive it from the descriptor it
-  signs with: a BIP-84 xpub already at <code>m/84'/1'/0'</code>, plus two non-hardened steps.
+  signs with: a BIP84 xpub already at <code>m/84'/1'/0'</code>, plus two non-hardened steps.
   Send the benefactor the 64-hex value. This is the only place this page needs any
   cryptography, and it is only needed once: derive it, write it down, and you could delete
   the three imported libraries this page uses for it.</p>
@@ -312,8 +312,8 @@ let sessionId = null;
 
 const ask = (method, params) => {
   if (!window.humid) throw new Error(
-    "window.humid is missing. Humid is not installed, not enabled, or not injecting here. " +
-    "serve this page over http://, not file://.");
+    "window.humid is missing. Humid is not installed, not enabled, or can't reach this page. " +
+    "Serve this page over http://, not file://.");
   return window.humid.request({ method, params });
 };
 
@@ -496,7 +496,7 @@ $("detect").onclick = async () => {
   try {
     const s = await ask("wallet_getSession", {});          // read-only, never prompts
     const scopes = Object.keys((s && s.sessionScopes) || {});
-    show("out-detect", "Humid is injecting into this page.\nauthorized session: " +
+    show("out-detect", "Humid is available on this page.\nauthorized session: " +
       (scopes.length ? "yes: " + scopes.join(", ") : "none yet, it will ask on first use"));
     log("humid detected");
   } catch (e) { show("out-detect", errText(e), "err"); }
@@ -572,7 +572,7 @@ $("getkey").onclick = async () => {
 // rather than waiting for Esplora to index anything. No Elements parser is needed: a
 // taproot scriptPubKey is the fixed 34-byte pattern 22·5120·<32 bytes> in the raw hex,
 // and nothing else in a Fund transaction looks like that; Humid's own change output is
-// BIP-84 P2WPKH (0014·<20 bytes>). bech32m comes from @scure/base, already imported
+// BIP84 P2WPKH (0014·<20 bytes>). bech32m comes from @scure/base, already imported
 // for the xpub, so this costs no new dependency.
 //
 // It is a scan, not a parse, so treat it as provisional: if more than one candidate
@@ -598,7 +598,7 @@ async function addressFromTransactionHex(txHex) {
 // Never identify it by position. Confidential transactions deliberately randomise output
 // order, so "output 0 is the covenant" is wrong by design rather than merely fragile,
 // and this page did not build the transaction, Humid did. Identify it by shape instead: the
-// covenant is pay-to-taproot, while Humid's own change is BIP-84 P2WPKH. If that is
+// covenant is pay-to-taproot, while Humid's own change is BIP84 P2WPKH. If that is
 // ambiguous, fall back to the funded amount; if that is ambiguous too, give up and say
 // so rather than watch an address that might be someone's change.
 function covenantAddressFrom(tx, expectedSats) {

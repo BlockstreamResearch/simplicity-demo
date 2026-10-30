@@ -86,7 +86,7 @@ point the import in `index.html` at wherever your package manager puts it.
 3. **Beneficiary key**: `Keypair` from 32 random bytes, exposing `.xOnlyPublicKey` as
    `BENEFICIARY_KEY` and signing the witness with `.signSchnorr()`. Note how much simpler
    this is than the browser-extension path, where no API exposes your own pubkey and the
-   key has to be recovered by BIP32-deriving a BIP-84 descriptor by hand.
+   key has to be recovered by BIP32-deriving a BIP84 descriptor by hand.
 4. **Compile**: the three compile-time params become `SimplicityArguments`
    (`fromU256Hex` for the pubkey, `fromU64` for the amount, `fromU16` for the distance),
    then `SimplicityProgram.load(source, args)` and `createP2trAddress(NUMS_KEY, network)`.
@@ -127,7 +127,7 @@ before learns it from a manifest. Requirements and caveats:
 - `FullWithdraw` is broken in *unpatched* Humid: it refuses an action whose only output is
   policy-asset change with *"pays nothing, so there is nothing to build."* The page warns
   about this in the confirmation dialog rather than letting it surprise you.
-- Humid signs with its own BIP-84 key at `m/84'/1'/0'/0/0`, which it exposes nowhere in its
+- Humid signs with its own BIP84 key at `m/84'/1'/0'/0/0`, which it exposes nowhere in its
   UI. "Get my key from Humid" recovers it by calling `getWalletDescriptor` and doing two
   non-hardened BIP32 steps, printing the raw descriptor alongside so the derivation is
   checkable. The curve maths is a dynamic `import()` from a CDN, so the local-only path keeps
