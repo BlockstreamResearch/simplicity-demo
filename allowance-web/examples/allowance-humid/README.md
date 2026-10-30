@@ -39,7 +39,7 @@ bun run build        # then reload the extension at chrome://extensions
 
 The patch header records the base commits it was generated against, describes both fixes
 well enough to redo by hand against a newer Humid, and covers what to do if `git apply`
-rejects it. Step 3 of the HOWTO covers the same ground in sequence.
+rejects it. Step 11 of the HOWTO covers the same ground in sequence.
 
 ## How this manifest differs from `examples/allowance/txmanifest.json`
 
@@ -84,7 +84,7 @@ runs the same reader the extension uses (`inspectManifestDocument` from
 `@humid/tx-manifest`), entirely client-side, with no wallet or network call. It is the
 cheapest way to check that a manifest and contract source are accepted at all.
 
-From `allowance-web`, with Humid cloned there as in Step 3c of the HOWTO:
+From `allowance-web`, with Humid cloned there as in Step 11 of the HOWTO:
 
 ```
 (cd humid && bun run web:dev)

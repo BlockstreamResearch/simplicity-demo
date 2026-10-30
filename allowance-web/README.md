@@ -1,7 +1,7 @@
 # Allowance covenant: the HOWTO and its files
 
 Start with the HOWTO, [Run an allowance covenant end to end](HOWTO.md): eleven steps that
-lock testnet L-BTC in a Simplicity covenant, draw it down, close it out, and then run the
+lock testnet LBTC in a Simplicity covenant, draw it down, close it out, and then run the
 same contract through a browser-extension wallet.
 
 Three documents, split by purpose:
@@ -43,13 +43,13 @@ Nothing in this directory needs building, but the HOWTO and `REFERENCE.md` point
 projects that live elsewhere:
 
 - [Humid](https://github.com/BlockstreamResearch/humid), the browser-extension wallet,
-  built in Step 3c and used in Step 11. Apply
+  built and used in Step 11. Apply
   `examples/allowance-humid/humid-allowance-fixes.patch` to it; without that patch no
-  withdrawal through the wallet works. Step 3c has the exact commands.
+  withdrawal through the wallet works. Step 11 has the exact commands.
 - [Simplex](https://github.com/BlockstreamResearch/smplx) for Step 2's tests, installed
   with `cargo install`; needs a Rust toolchain.
 - [LWK](https://github.com/Blockstream/lwk) for the page itself, built to wasm with
-  `--features simplicity`. Step 3b has the commands.
+  `--features simplicity`. Step 3 has the commands.
 - [`txmanifest-wallet`](https://github.com/stringhandler/txmanifest-wallet), optional: a
   prebuilt CLI that `REFERENCE.md` describes for checking a manifest without a browser.
 
@@ -58,7 +58,7 @@ A Liquid testnet faucet supplies coins (Step 4). Everything here is testnet only
 ## Not included
 
 - `examples/allowance-lwk/vendor/`: the 15 MB compiled wasm module. It is specific to the
-  machine that built it, and Step 3b of the HOWTO says how to build it.
+  machine that built it, and Step 3 of the HOWTO says how to build it.
 - Wallet files holding plaintext mnemonics, and saved instance and state files. Both
   worked examples create their own.
 - `examples/last_will/`: a second manifest worth comparing against, which lives in the

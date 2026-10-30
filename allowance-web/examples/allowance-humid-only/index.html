@@ -280,7 +280,7 @@ const NEXT_STEPS = [
    "that already, so if you see it here the manifest and the action's parameters have " +
    "genuinely diverged."],
   [/insufficient funds|shortfall|nothing funding it/i,
-   "Humid's own wallet is short of testnet L-BTC. Copy a receive address from the " +
+   "Humid's own wallet is short of testnet LBTC. Copy a receive address from the " +
    "extension and top it up at https://liquidtestnet.com/faucet, then wait about a minute."],
   [/user rejected|denied/i,
    "The request was declined in the extension's popup. Nothing was sent."],
@@ -696,7 +696,7 @@ $("findaddr").onclick = async () => {
 $("getbalance").onclick = async () => {
   show("out-key", "Asking Humid for its balance…");
   try {
-    // Omitting assetId asks for the policy asset (tL-BTC). This carries its own
+    // Omitting assetId asks for the policy asset (tLBTC). This carries its own
     // "Share Liquid balance?" confirmation, separate from the transaction one.
     const r = await invoke("getBalance", {});
     const sats = r && r.balance;

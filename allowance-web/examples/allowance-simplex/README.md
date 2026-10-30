@@ -39,6 +39,11 @@ it, not a replacement for reading it.
    layer rather than inside the contract, which is worth seeing distinctly from
    a contract-level rejection (below).
 
+## Watching a test run
+
+To see what the contract does during a test, run `simplex test -vv` from the project
+directory. It traces every jet call with its real values.
+
 ## Tests to write yourself
 
 Each of these is a concrete next test, roughly in order of how much new ground it

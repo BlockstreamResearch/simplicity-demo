@@ -86,7 +86,7 @@
 <main>
 
 <h1>Allowance covenant <span class="role" id="signer-chip">in-page signing</span></h1>
-<p class="sub">A benefactor locks testnet L-BTC in a Simplicity covenant; a beneficiary
+<p class="sub">A benefactor locks testnet LBTC in a Simplicity covenant; a beneficiary
 withdraws a fixed amount, no more often than once every N blocks, until it is empty.
 Everything can run in this page (contract compilation, signing and broadcasting) with no
 backend and no browser extension, or the same contract can be handed to a wallet as a
@@ -471,7 +471,7 @@ const NEXT_STEPS = [
    "--target web -- --features simplicity, then copy lwk_wasm.js and lwk_wasm_bg.wasm " +
    "into vendor/."],
   [/insufficient funds|shortfall|nothing funding it/i,
-   "The spending wallet is short of testnet L-BTC. Top it up from the faucet and sync."],
+   "The spending wallet is short of testnet LBTC. Top it up from the faucet and sync."],
   [/non-BIP68-final/i,
    "The network agrees with the contract that not enough blocks have passed. This is the " +
    "timelock working: wait and retry."],
