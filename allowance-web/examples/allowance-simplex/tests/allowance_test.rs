@@ -4,8 +4,7 @@
 // branch of the contract: one full success lifecycle (funding through to the
 // covenant ending), and one rejection that happens at the network layer rather
 // than inside the contract itself. `examples/allowance-simplex/README.md`
-// describes four more already-written tests (not included here, to keep this
-// file small) and several genuinely unwritten ones, if you want more.
+// describes more tests to write yourself.
 
 use simplex_allowance_example::artifacts::allowance::AllowanceProgram;
 use simplex_allowance_example::artifacts::allowance::derived_allowance::{AllowanceArguments, AllowanceWitness};
@@ -15,12 +14,12 @@ use simplex::provider::{ProviderError, SimplicityNetwork};
 use simplex::signer::SignerError;
 use simplex::simplicityhl::elements::{Script, Sequence, Txid};
 use simplex::transaction::{
-    ChangeOutput, FinalTransaction, PartialInput, PartialOutput, ProgramInput, RequiredSignature, UTXO,
+    ChangeOutput, FinalTransaction, PartialInput, PartialOutput, ProgramInput, ProgramSignature, UTXO,
 };
 
-// The beneficiary is an ordinary Simplex wallet built from a BIP-39 mnemonic,
+// The beneficiary is an ordinary Simplex wallet built from a BIP39 mnemonic,
 // and the contract takes its public key as `param::BENEFICIARY_KEY`. This is a
-// standard BIP-39 test vector: its key is public knowledge and must never hold
+// standard BIP39 test vector: its key is public knowledge and must never hold
 // real funds.
 const BENEFICIARY_MNEMONIC: &str =
     "legal winner thank year wave sausage worth useful legal winner thank yellow";
@@ -114,7 +113,9 @@ fn spend_skeleton(program: &AllowanceProgram, utxo: UTXO) -> FinalTransaction {
         ),
         // `witness::SIGNATURE` is a bare `Signature` rather than one nested
         // inside an `Either`, so the signer needs no path into the witness.
-        RequiredSignature::Witness("SIGNATURE".to_string()),
+        // The default message is `sighash_all`, which is what the contract
+        // checks with `jet::sig_all_hash`.
+        Some(ProgramSignature::new("SIGNATURE")),
     );
 
     ft
@@ -195,7 +196,7 @@ fn utxo_at(context: &simplex::TestContext, script: &Script, txid: Txid) -> anyho
 ///
 /// The contract cannot see the chain: `enforce_relative_distance` only checks
 /// the sequence number the transaction declares. The node is what compares
-/// that declaration against the height the input was mined at, under BIP-68.
+/// that declaration against the height the input was mined at, under BIP68.
 /// On a real network the beneficiary waits; on regtest the blocks are free.
 fn wait_out_the_interval(context: &simplex::TestContext) -> anyhow::Result<()> {
     let tip = context.get_default_provider().fetch_tip_height()?;
@@ -226,27 +227,27 @@ fn allowance_drains_over_successive_withdrawals(context: simplex::TestContext) -
     for withdrawal in 1..=4 {
         wait_out_the_interval(&context)?;
 
-        let retained = utxo.amount() - ALLOWANCE_AMOUNT;
+        let retained = utxo.amount()? - ALLOWANCE_AMOUNT;
         let ft = partial_withdrawal(&allowance, context.get_network(), utxo, retained, to.clone());
 
         let receipt = allowance.beneficiary.broadcast(&ft)?;
         receipt.wait()?;
 
         utxo = utxo_at(&context, &script, receipt.txid())?;
+        let held = utxo.amount()?;
         anyhow::ensure!(
-            utxo.amount() == retained,
-            "after withdrawal {withdrawal} the allowance holds {} sats, expected {retained}",
-            utxo.amount()
+            held == retained,
+            "after withdrawal {withdrawal} the allowance holds {held} sats, expected {retained}"
         );
     }
 
     // The balance is down to `ALLOWANCE_AMOUNT`, so `full_withdrawal()` is
     // now true and the beneficiary may take all of it without re-creating
     // the covenant.
+    let left = utxo.amount()?;
     anyhow::ensure!(
-        utxo.amount() == ALLOWANCE_AMOUNT,
-        "expected {ALLOWANCE_AMOUNT} sats left, found {}",
-        utxo.amount()
+        left == ALLOWANCE_AMOUNT,
+        "expected {ALLOWANCE_AMOUNT} sats left, found {left}"
     );
     wait_out_the_interval(&context)?;
 
@@ -269,7 +270,7 @@ fn allowance_drains_over_successive_withdrawals(context: simplex::TestContext) -
 /// different kind of failure than a broken contract rule: the transaction
 /// declares the full wait in its sequence number, so the contract's own
 /// local execution is satisfied and this spend is stopped by the *node*
-/// instead, under BIP-68, not by `assert!` inside the covenant.
+/// instead, under BIP68, not by `assert!` inside the covenant.
 #[simplex::test]
 fn withdrawing_before_the_interval_is_rejected(context: simplex::TestContext) -> anyhow::Result<()> {
     let allowance = Allowance::new(&context);
@@ -279,7 +280,7 @@ fn withdrawing_before_the_interval_is_rejected(context: simplex::TestContext) ->
     // transaction's own block has been mined.
     let funded = fund(&context, &script, FUNDING_AMOUNT)?;
 
-    let retained = funded.amount() - ALLOWANCE_AMOUNT;
+    let retained = funded.amount()? - ALLOWANCE_AMOUNT;
     let ft = partial_withdrawal(
         &allowance,
         context.get_network(),

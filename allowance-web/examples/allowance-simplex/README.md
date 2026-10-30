@@ -12,17 +12,6 @@ in, build, test).
   *different* things rather than to cover every branch. "Tests to write
   yourself" below describes more, with what each one would prove.
 
-## Where this came from
-
-Written by calling directly into the real Simplex SDK rather than reimplementing
-any of its signing/broadcast logic by hand, which is worth knowing, since the SDK's own API
-surface is close to undocumented, which makes code that doesn't do this easy to get
-subtly wrong.
-
-**The test file itself is left exactly as written**: it's a real, passing
-artifact, not something to re-derive. What follows here is orientation for reading
-it, not a replacement for reading it.
-
 ## The two tests included here
 
 1. `allowance_drains_over_successive_withdrawals` walks the full success lifecycle:
@@ -82,7 +71,7 @@ fn spend_skeleton(program: &AllowanceProgram, utxo: UTXO) -> FinalTransaction {
             Box::new(program.as_ref().clone()),
             AllowanceWitness { signature: DUMMY_SIGNATURE },
         ),
-        RequiredSignature::Witness("SIGNATURE".to_string()),
+        Some(ProgramSignature::new("SIGNATURE")),
     );
     ft
 }
