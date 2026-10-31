@@ -1943,12 +1943,14 @@ function updateHints() {
 
   const fund = Number($("fundamt").value);
   if (fund > 0 && allowance > 0) {
-    const periods = Math.floor(fund / allowance);
+    // Every claim but the last takes ALLOWANCE_AMOUNT; the last takes whatever is left,
+    // so a partial final period still costs a claim and a full wait.
+    const withdrawals = Math.ceil(fund / allowance);
     $("hint-fundamt").textContent = asLbtc(fund) +
-      (periods >= 1
-        ? `, about ${periods} withdrawal${periods === 1 ? "" : "s"} of ${allowance} sats` +
-          (mindist > 0 ? `, so ${blocksAsTime(periods * mindist).replace("≈ ", "")} to empty` : "")
-        : ", less than one full withdrawal, so it closes on the first claim");
+      (fund > allowance
+        ? `, about ${withdrawals} withdrawals` + (fund % allowance ? ", the last one smaller" : "") +
+          (mindist > 0 ? `, so ${blocksAsTime(withdrawals * mindist).replace("≈ ", "")} to empty` : "")
+        : ", at most one allowance, so it closes on the first claim");
   } else {
     $("hint-fundamt").textContent = fund > 0 ? asLbtc(fund) : "";
   }
