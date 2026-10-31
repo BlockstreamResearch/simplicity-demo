@@ -263,7 +263,9 @@ const NEXT_STEPS = [
    "password, and try again. Humid re-locks itself after a while, so expect this " +
    "occasionally rather than once."],
   [/window\.humid is missing/i,
-   "Check the extension is enabled at chrome://extensions, that this page is served over " +
+   "If you loaded, enabled or reloaded Humid after opening this page, reload the page: " +
+   "the browser adds the extension only to pages loaded after it. Otherwise, check the " +
+   "extension is enabled at chrome://extensions, that this page is served over " +
    "http:// rather than opened as a file://, and that you are in the Chromium profile " +
    "Humid is installed in."],
   [/unimplemented-construct|relative timelock/i,

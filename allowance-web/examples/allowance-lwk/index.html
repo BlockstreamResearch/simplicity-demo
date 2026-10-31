@@ -424,8 +424,10 @@ const NEXT_STEPS = [
    "browser, then Humid. Enter your password and try again. It re-locks itself after a " +
    "while, so expect this occasionally."],
   [/window\.humid is not present|window\.humid is missing/i,
-   "Check the extension is enabled at chrome://extensions, that this page is on http:// " +
-   "rather than file://, and that you are in the profile Humid is installed in."],
+   "If you loaded, enabled or reloaded Humid after opening this page, reload the page: " +
+   "the browser adds the extension only to pages loaded after it. Otherwise, check the " +
+   "extension is enabled at chrome://extensions, that this page is on http:// rather " +
+   "than file://, and that you are in the profile Humid is installed in."],
   [/unimplemented-construct|relative timelock/i,
    "The un-patched relative-timelock bug: apply " +
    "examples/allowance-humid/humid-allowance-fixes.patch, rebuild with bun run build, and " +
@@ -560,6 +562,7 @@ async function loadLibrary() {
     if ($("benkey").value.trim()) {
       try {
         contract = await buildContract(readParams());
+        fillTermsBlob();
         log("recompiled saved contract:", contract.address.toString());
         show("out-compile", "Recompiled from saved parameters.\ncovenant address: " +
           contract.address.toString(), "");
@@ -926,6 +929,7 @@ $("btn-terms-load").onclick = async () => {
         "The terms were altered in transit, or the sender compiled a different contract."
       );
     }
+    fillTermsBlob();
 
     const kp = loadBeneficiaryKey();
     const mine = kp.xOnlyPublicKey.toString() === params.benkey;
@@ -960,6 +964,7 @@ $("btn-manual-load").onclick = async () => {
     updateHints();
     contract = await buildContract(readParams());
     saveParams(contract.params);
+    fillTermsBlob();
     show("out-terms-in", "Loaded from the typed values.\ncovenant address: " +
       contract.address.toString(), "");
     log("manual terms loaded:", contract.address.toString());
@@ -1722,7 +1727,7 @@ function forgetOtherSigner() {
 async function humidRequest(method, params) {
   if (!window.humid) {
     throw new Error(
-      "window.humid is not present. Humid is not installed, not enabled, or can't reach " +
+      "window.humid is missing. Humid is not installed, not enabled, or can't reach " +
       "this page. Load the extension at chrome://extensions and open this page over " +
       "http://, not file://."
     );
@@ -1837,7 +1842,7 @@ async function humidBeneficiaryKey() {
 $("btn-humid-detect").onclick = async () => {
   show("out-humid", "Looking for the extension…");
   try {
-    if (!window.humid) throw new Error("window.humid is not present on this page.");
+    if (!window.humid) throw new Error("window.humid is missing on this page.");
     // getSession reads state without prompting, unlike createSession.
     const session = await humidRequest("wallet_getSession", {});
     const scopes = (session && session.sessionScopes) || {};
