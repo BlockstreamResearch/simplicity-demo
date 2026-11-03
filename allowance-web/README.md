@@ -1,6 +1,6 @@
 # Allowance covenant: the HOWTO and its files
 
-Start with the HOWTO, [Run an allowance covenant end to end](HOWTO.md): eleven steps that
+Start with the HOWTO, [Build a complete Simplicity application, from contract to web to wallet](HOWTO.md): eleven steps that
 lock testnet LBTC in a Simplicity covenant, draw it down, close it out, and then run the
 same contract through a browser-extension wallet.
 
