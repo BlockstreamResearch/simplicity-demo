@@ -1,8 +1,8 @@
 # Build a complete Simplicity application, from contract to web to wallet
 
-**Goal**: test a [Simplicity](../../glossary.md#simplicity)
-[covenant](../../glossary.md#covenant) on a local [regtest](../../glossary.md#regtest)
-network, then lock test Liquid bitcoin (tLBTC) in it on [Liquid](../../glossary.md#liquid)
+**Goal**: test a [Simplicity](https://docs.simplicity-lang.org/glossary/#simplicity)
+[covenant](https://docs.simplicity-lang.org/glossary/#covenant) on a local [regtest](https://docs.simplicity-lang.org/glossary/#regtest)
+network, then lock test Liquid bitcoin (tLBTC) in it on [Liquid](https://docs.simplicity-lang.org/glossary/#liquid)
 testnet, withdraw from it on a schedule, and close it out, driven from a web page you can
 edit.
 
@@ -29,10 +29,10 @@ Other tools get installed during individual steps below.
 
 ## The pieces
 
-The page reads the chain directly and gets each [transaction](../../glossary.md#transaction) signed in one of two ways: by
-the [LWK](../../glossary.md#lwk) library inside the page (Steps 4 to 10), or by the
-[Humid](../../glossary.md#humid) wallet extension, which works from a
-[manifest](../../glossary.md#manifest) (Step 11).
+The page reads the chain directly and gets each [transaction](https://docs.simplicity-lang.org/glossary/#transaction) signed in one of two ways: by
+the [LWK](https://docs.simplicity-lang.org/glossary/#lwk) library inside the page (Steps 4 to 10), or by the
+[Humid](https://docs.simplicity-lang.org/glossary/#humid) wallet extension, which works from a
+[manifest](https://docs.simplicity-lang.org/glossary/#manifest) (Step 11).
 
 ```mermaid
 flowchart TD
@@ -69,7 +69,7 @@ git clone https://github.com/BlockstreamResearch/simplicity-demo
 cd simplicity-demo/allowance-web
 ```
 
-The [contract](../../glossary.md#contract), the manifests, the worked examples and the
+The [contract](https://docs.simplicity-lang.org/glossary/#contract), the manifests, the worked examples and the
 wallet patch all live there.
 
 Run every command in the rest of this guide from `allowance-web`. If you open another
@@ -79,7 +79,7 @@ command fails, look up its message in [`REFERENCE.md`, "Errors and what causes
 them"](REFERENCE.md#errors-and-what-causes-them).
 
 Open `contracts/allowance.simf` in your editor or viewer, and
-look through it to see what [SimplicityHL](../../glossary.md#simplicityhl) code looks
+look through it to see what [SimplicityHL](https://docs.simplicity-lang.org/glossary/#simplicityhl) code looks
 like. Every later step builds on this one contract. You don't need to change anything.
 
 For what each function enforces, see
@@ -87,8 +87,8 @@ For what each function enforces, see
 
 ## 2. Run the contract's tests on regtest
 
-Install [Simplex](../../glossary.md#simplex), which runs SimplicityHL integration tests against a local
-[Elements](../../glossary.md#elements) regtest [node](../../glossary.md#node) that it starts and funds for you. It
+Install [Simplex](https://docs.simplicity-lang.org/glossary/#simplex), which runs SimplicityHL integration tests against a local
+[Elements](https://docs.simplicity-lang.org/glossary/#elements) regtest [node](https://docs.simplicity-lang.org/glossary/#node) that it starts and funds for you. It
 can take some time to compile:
 
 ```bash
@@ -126,8 +126,8 @@ Exit Status: 0
 ```
 
 The first test walks a full lifecycle. The second attempts a
-withdrawal before the [timelock](../../glossary.md#timelock), which the node rejects
-under [BIP68](https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki).
+withdrawal before the [timelock](https://docs.simplicity-lang.org/glossary/#timelock), which the node rejects
+under [BIP68](https://docs.simplicity-lang.org/documentation/timelocks/#timelock-enforcement-mechanisms).
 
 [`examples/allowance-simplex/README.md`](examples/allowance-simplex/README.md) describes
 more tests to write yourself.
@@ -193,12 +193,12 @@ then **Request testnet funds**.
 
 You should see a balance within about a minute. Press **Sync & show balance** to check
 again. If it stays at zero, use the [web form](https://liquidtestnet.com/faucet) with the
-[address](../../glossary.md#address) the page shows.
+[address](https://docs.simplicity-lang.org/glossary/#address) the page shows.
 
 ## 5. Generate the beneficiary's key
 
 Open the **I'm the beneficiary** tab and press **Generate / show my key**. This creates
-the BIP340 x-only [public key](../../glossary.md#public-key) that gets compiled into the contract; only a signature from
+the BIP340 x-only [public key](https://docs.simplicity-lang.org/glossary/#public-key) that gets compiled into the contract; only a signature from
 its private half can withdraw.
 
 You should see 64 hex characters.
@@ -213,7 +213,7 @@ On the benefactor tab, fill in the three values that get compiled into the contr
 
 - **Beneficiary's public key**, from Step 5.
 - **Withdrawable per period**, which is `ALLOWANCE_AMOUNT` in sats. Keep it well above
-  500: the page uses a fixed [fee](../../glossary.md#fee) of 500 sats for every withdrawal and pays it out of the
+  500: the page uses a fixed [fee](https://docs.simplicity-lang.org/glossary/#fee) of 500 sats for every withdrawal and pays it out of the
   allowance, so an allowance of 500 sats or less can't be withdrawn.
 - **Blocks between withdrawals**, which is `MIN_DISTANCE`. `3` means about three
   minutes, convenient for a first run; 1440 is about a day.
@@ -233,7 +233,7 @@ Press **Compile & derive address**.
       L.XOnlyPublicKey.fromString(NUMS_INTERNAL_KEY), network);
     ```
 
-You should see the [CMR](../../glossary.md#cmr) and a `tex1p…` covenant address. Changing
+You should see the [CMR](https://docs.simplicity-lang.org/glossary/#cmr) and a `tex1p…` covenant address. Changing
 any of the terms gives a different allowance at a different address.
 
 With two people, press **Copy** under "Hand the terms to the beneficiary" to get the blob
@@ -252,7 +252,7 @@ Set the amount to lock, leave **Broadcast for real** unchecked, and press **Fund
     const tx = wollet.finalize(signer.sign(pset)).extractTx();
     ```
 
-You should see a dry run reporting the txid it would have sent, the [output](../../glossary.md#output) count and
+You should see a dry run reporting the txid it would have sent, the [output](https://docs.simplicity-lang.org/glossary/#output) count and
 the fee, with nothing broadcast.
 
 Now select **Broadcast for real** and press **Fund** again.
@@ -289,7 +289,7 @@ Open the **I'm the beneficiary** tab and press **Refresh status**. The instance 
 the withdrawal controls live on that tab, and Steps 9 and 10 stay there.
 
 You should see one instance listed with a balance, a timelock countdown, and either
-`PartialWithdraw` or `FullWithdraw` as its action. Each [UTXO](../../glossary.md#utxo) at
+`PartialWithdraw` or `FullWithdraw` as its action. Each [UTXO](https://docs.simplicity-lang.org/glossary/#utxo) at
 the covenant address is a separate allowance with its own timelock.
 
 ??? example "Run the same query by hand"
@@ -301,7 +301,7 @@ the covenant address is a separate allowance with its own timelock.
     ```
 
     You should see a JSON array with one entry per instance, each with a `value` and a
-    `status.block_height`, then the tip [height](../../glossary.md#height) as a bare number.
+    `status.block_height`, then the tip [height](https://docs.simplicity-lang.org/glossary/#height) as a bare number.
 
     Compute `depth = tip - block_height + 1`; an instance becomes spendable once
     `depth >= MIN_DISTANCE`. The action follows the balance: `FullWithdraw` when
@@ -511,7 +511,7 @@ To adapt a piece for your own contract:
   walks its seven parts in order, with the wasm ownership rules for editing its library
   calls.
 - **The indexer.** [Step 8](#8-watch-the-allowance) has the whole algorithm already:
-  two [Esplora](../../glossary.md#esplora) calls, the depth arithmetic, and the balance
+  two [Esplora](https://docs.simplicity-lang.org/glossary/#esplora) calls, the depth arithmetic, and the balance
   comparison that picks the action.
 
 To drive the same contract without a browser, see [`REFERENCE.md`, "Other ways to drive

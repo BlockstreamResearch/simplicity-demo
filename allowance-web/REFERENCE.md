@@ -13,7 +13,7 @@ shaped the way it is, see [`EXPLANATION.md`](EXPLANATION.md).
 - [Chain access](#chain-access)
 - [Other ways to drive the same contract](#other-ways-to-drive-the-same-contract)
 
-The Humid sections describe [Humid](../../glossary.md#humid) 1.1.4 (`a6d211d`), and their
+The Humid sections describe [Humid](https://docs.simplicity-lang.org/glossary/#humid) 1.1.4 (`a6d211d`), and their
 file paths are relative to a Humid checkout. Humid changes quickly, so check a newer release against its source.
 
 ## Errors and what causes them
@@ -22,19 +22,19 @@ file paths are relative to a Humid checkout. Humid changes quickly, so check a n
 |---|---|---|
 | `{"reject": "unimplemented-construct"}` on any withdrawal | the relative-timelock bug | apply the patch from Step 11, rebuild, reload the extension |
 | `"FullWithdraw" pays nothing, so there is nothing to build.` | the change-only-output bug | same patch |
-| `cannot be built because it requires rustc 1.91.0 or newer` | Rust is older than [Simplex](../../glossary.md#simplex) needs | `rustup update stable`, then install again |
+| `cannot be built because it requires rustc 1.91.0 or newer` | Rust is older than [Simplex](https://docs.simplicity-lang.org/glossary/#simplex) needs | `rustup update stable`, then install again |
 | `No available targets are compatible with triple "wasm32-unknown-unknown"` | the `clang` on your `PATH` has no WebAssembly backend | install LLVM from your package manager, or from Homebrew on macOS, and put its `clang` first on your `PATH` |
 | `reject: shortfall`, with `This account holds 0 of the … needed` | Humid's funds are unconfirmed, or it is on mainnet | wait a minute for the funding to confirm; check the network menu says **Liquid Testnet** |
 | `Unlock the wallet to continue.` | the wallet is locked | open it from the Extensions button and enter the password; it re-locks periodically |
 | `X is neither a parameter nor an argument of this action` | usually `instance` single-nested instead of double-nested | see the nesting rule below |
 | `[object Object]` instead of a message | the real text is in the thrown error's data | read `reject` and `reason` off it |
 | `No handler for method` | a chain method called directly | tunnel it through `wallet_invokeMethod` |
-| `non-BIP68-final` | not enough blocks have passed | wait; the [timelock](../../glossary.md#timelock) is working |
+| `non-BIP68-final` | not enough blocks have passed | wait; the [timelock](https://docs.simplicity-lang.org/glossary/#timelock) is working |
 | `insufficient fee, rejecting replacement` | a previous attempt already reached the mempool | check the explorer before retrying; it probably succeeded |
 | `window.humid is missing` | extension disabled, wrong profile, page opened as `file://`, or page already open when Humid was loaded, enabled or reloaded | enable it, serve over `http://`, and reload the page |
 | `Import #0 "wbg": module is not an object or function` | a web-target wasm build overwrote the bundler-target `pkg/` | rebuild `pkg/` with `--target bundler` |
 | `null pointer passed to rust` | a wasm handle used after a call consumed it | build a fresh `TxOut` per call; reassign after every builder step |
-| `Expected a blinded address but got a non-blinded one` | `Address.parse` requires a [confidential](../../glossary.md#confidential) [address](../../glossary.md#address) | use `new Address(s)` and check the network with `isMainnet()` |
+| `Expected a blinded address but got a non-blinded one` | `Address.parse` requires a [confidential](https://docs.simplicity-lang.org/glossary/#confidential) [address](https://docs.simplicity-lang.org/glossary/#address) | use `new Address(s)` and check the network with `isMainnet()` |
 
 ## Talking to the Humid wallet
 
@@ -59,7 +59,7 @@ await window.humid.request({
 });
 ```
 
-That scope is the [Liquid](../../glossary.md#liquid) testnet CAIP-2 id, from
+That scope is the [Liquid](https://docs.simplicity-lang.org/glossary/#liquid) testnet CAIP-2 id, from
 `core/chains/liquid/domain/LiquidChain.ts`.
 
 Ten chain methods are registered (`liquidRpcMethods.ts`): `getBalance`,
@@ -85,7 +85,7 @@ A separate second layer: each method has its own grant. The connect screen lists
 read-only methods the page requested, such as `getWalletDescriptor`, and ticks them by
 default. `processConfidentialTransaction` can't be pre-approved, so it never appears there
 (`methodPolicyPresentation.ts`): every call shows Humid's own "Perform a contract action?"
-confirmation, which is where you review and approve the [transaction](../../glossary.md#transaction).
+confirmation, which is where you review and approve the [transaction](https://docs.simplicity-lang.org/glossary/#transaction).
 
 ### Building Humid
 
@@ -103,7 +103,7 @@ Parameters, Zod-validated in `packages/tx-manifest/src/request/validation.ts`:
 // broadcast defaults to false
 ```
 
-`contractSources` keys must match the path the [manifest](../../glossary.md#manifest) names for the source, for example
+`contractSources` keys must match the path the [manifest](https://docs.simplicity-lang.org/glossary/#manifest) names for the source, for example
 `{"./allowance.simf": "<source text>"}`.
 
 **`instance` is double-nested and `state` isn't.** `normaliseInstance()` reads
@@ -133,9 +133,9 @@ A refusal throws rather than returning a field, carrying `reject` and `reason` i
 data. So "refused" versus "built but not sent" is "did it throw" versus "did it resolve
 with `broadcast: false`".
 
-`transactionHex` is the full raw transaction, which is enough to read the [covenant](../../glossary.md#covenant) address
-locally: a [taproot](../../glossary.md#taproot) `scriptPubKey` is the fixed pattern `22·5120·<32 bytes>`, and bech32m
-encodes it with the `tex` HRP on testnet. Identify the [output](../../glossary.md#output) by shape rather than
+`transactionHex` is the full raw transaction, which is enough to read the [covenant](https://docs.simplicity-lang.org/glossary/#covenant) address
+locally: a [taproot](https://docs.simplicity-lang.org/glossary/#taproot) `scriptPubKey` is the fixed pattern `22·5120·<32 bytes>`, and bech32m
+encodes it with the `tex` HRP on testnet. Identify the [output](https://docs.simplicity-lang.org/glossary/#output) by shape rather than
 position, since the wallet chooses the order of a funding transaction's outputs.
 
 ## Deriving keys and addresses from the wallet
@@ -156,7 +156,7 @@ leading parity byte for the 64-hex x-only key. Decoding the receive address inst
 work, because P2WPKH commits to `HASH160(pubkey)`.
 
 For a receive address, which the wallet exposes no method for: P2WPKH of
-`HASH160(pubkey)`, bech32 ([witness](../../glossary.md#witness) v0, so bech32 rather than the bech32m used for the
+`HASH160(pubkey)`, bech32 ([witness](https://docs.simplicity-lang.org/glossary/#witness) v0, so bech32 rather than the bech32m used for the
 taproot covenant), with the `tex` HRP. The wallet's own receive screen may show the
 confidential `tlq1…` form of the same wallet.
 
@@ -184,7 +184,7 @@ don't: `confirmation/provenance.ts` tags every displayed value as `verified`, `c
 
 `examples/allowance-humid-only/txmanifest.json` is `manifest_version 0.1.0`, for the
 wallet. `examples/allowance/txmanifest.json` is `0.3.0`, for the CLI engine below. They
-describe the same [contract](../../glossary.md#contract).
+describe the same [contract](https://docs.simplicity-lang.org/glossary/#contract).
 
 `examples/allowance/txmanifest.schema.json` is the machine-checkable form of the `0.3.0`
 dialect only. Validating the `0.1.0` manifest against it reports exactly one error, on
@@ -237,9 +237,9 @@ to wait, and stop when nothing is pending.
 Sync the page's wallet through Waterfalls at
 `https://waterfalls.liquidwebwallet.org/liquidtestnet/api`, with a client created as
 `new EsploraClient(network, url, true, 1, false)`, where `true` enables Waterfalls. A plain
-[Esplora](../../glossary.md#esplora) scan sends one request per address, 40 or more per sync, while Waterfalls returns the
+[Esplora](https://docs.simplicity-lang.org/glossary/#esplora) scan sends one request per address, 40 or more per sync, while Waterfalls returns the
 whole wallet's history in one request. The server sends CORS headers but isn't a full Esplora,
-so covenant lookups, the tip [height](../../glossary.md#height) and broadcasts still go to `blockstream.info`. The
+so covenant lookups, the tip [height](https://docs.simplicity-lang.org/glossary/#height) and broadcasts still go to `blockstream.info`. The
 Waterfalls operator learns the wallet's addresses.
 
 The faucet at `liquidtestnet.com/api/faucet?address=…&action=lbtc` doesn't send any CORS headers. A
@@ -262,8 +262,8 @@ transaction or from a handoff blob, on the benefactor's word.
 changes"](EXPLANATION.md#who-signs-and-what-that-changes) covers where that matters.
 
 **`simc` and `hal-simplicity`.** `cargo install simplicityhl` gives `simc`, which compiles
-a `.simf` with concrete [parameters](../../glossary.md#parameter) to a base64 [program](../../glossary.md#program) plus its [CMR](../../glossary.md#cmr).
-`cargo install hal-simplicity` inspects programs and can build a [PSET](../../glossary.md#pset) by hand. Neither
+a `.simf` with concrete [parameters](https://docs.simplicity-lang.org/glossary/#parameter) to a base64 [program](https://docs.simplicity-lang.org/glossary/#program) plus its [CMR](https://docs.simplicity-lang.org/glossary/#cmr).
+`cargo install hal-simplicity` inspects programs and can build a [PSET](https://docs.simplicity-lang.org/glossary/#pset) by hand. Neither
 path in the HOWTO needs them, but running `simc` once confirms that the toolchain works and
 the contract compiles, before you suspect anything else. The
 [quickstart](https://docs.simplicity-lang.org/getting-started/quickstart) has the exact
@@ -282,7 +282,7 @@ tx-manifest-wallet run <manifest> <Action> --wallet w.json --params p.json
 ```
 
 That exercises the real compile and witness path without spending anything, and it is the
-only path here that runs without a browser. It still prompts for a [fee](../../glossary.md#fee) rate, so it needs a
+only path here that runs without a browser. It still prompts for a [fee](https://docs.simplicity-lang.org/glossary/#fee) rate, so it needs a
 terminal. Use 0.3.0 or a later 0.3.x release: this engine checks `manifest_version` at
 parse time against its own `FORMAT_VERSION`, citing ELIP-205, unlike Humid, and a 0.2.x
 release rejects the `0.3.0` manifest outright. Its README says not to use it with real funds.

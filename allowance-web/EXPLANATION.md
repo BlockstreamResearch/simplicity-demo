@@ -6,20 +6,20 @@ reasoning, see [`REFERENCE.md`](REFERENCE.md).
 
 ## What a Simplicity covenant is, at the level needed here
 
-The [contract](../../glossary.md#contract) compiles to a single [Taproot](../../glossary.md#taproot) leaf script. Spending a [UTXO](../../glossary.md#utxo) locked to it means
+The [contract](https://docs.simplicity-lang.org/glossary/#contract) compiles to a single [Taproot](https://docs.simplicity-lang.org/glossary/#taproot) leaf script. Spending a [UTXO](https://docs.simplicity-lang.org/glossary/#utxo) locked to it means
 satisfying that script, and this contract's logic makes that conditional on a valid
-signature, on the shape of the spending [transaction](../../glossary.md#transaction)'s own [outputs](../../glossary.md#output), and on how much time
+signature, on the shape of the spending [transaction](https://docs.simplicity-lang.org/glossary/#transaction)'s own [outputs](https://docs.simplicity-lang.org/glossary/#output), and on how much time
 has passed since the UTXO was created.
 
-Three values are fixed at compile time and baked into the [address](../../glossary.md#address): `BENEFICIARY_KEY` (a
+Three values are fixed at compile time and baked into the [address](https://docs.simplicity-lang.org/glossary/#address): `BENEFICIARY_KEY` (a
 BIP340 x-only pubkey), `ALLOWANCE_AMOUNT` (satoshis withdrawable per period), and
 `MIN_DISTANCE` (blocks between withdrawals). Change any of them and you have a different,
-unrelated allowance at a different address. The [witness](../../glossary.md#witness) is a single `SIGNATURE`, checked
+unrelated allowance at a different address. The [witness](https://docs.simplicity-lang.org/glossary/#witness) is a single `SIGNATURE`, checked
 against `BENEFICIARY_KEY` by `checksig()`; no other spending key exists.
 
 Vocabulary used throughout: the **benefactor** funds an allowance, the **beneficiary**
 draws it down and holds the only key that can, and an **instance** is one funded
-allowance. One UTXO at the [covenant](../../glossary.md#covenant) address is exactly one instance.
+allowance. One UTXO at the [covenant](https://docs.simplicity-lang.org/glossary/#covenant) address is exactly one instance.
 
 ## What the contract enforces
 
@@ -56,9 +56,9 @@ would be unimplementable.
 
 `main()`'s match arm is literally `true => ()`, so nothing further is checked on that
 branch. Once the balance has dropped to `ALLOWANCE_AMOUNT` or less, the contract requires
-only the beneficiary's signature and the BIP68 [timelock](../../glossary.md#timelock), and the beneficiary may spend to
+only the beneficiary's signature and the BIP68 [timelock](https://docs.simplicity-lang.org/glossary/#timelock), and the beneficiary may spend to
 any outputs. The payout-plus-fee shape the tooling builds for `FullWithdraw` is the
-[manifest](../../glossary.md#manifest)'s choice rather than a rule the script imposes. This is the most surprising
+[manifest](https://docs.simplicity-lang.org/glossary/#manifest)'s choice rather than a rule the script imposes. This is the most surprising
 property of the contract and the easiest to miss.
 
 ### What `partial_withdrawal()` checks
@@ -69,13 +69,13 @@ rule is a lower bound on what stays in the covenant, equivalently a ceiling of
 `ALLOWANCE_AMOUNT` on what may leave it. It bounds the amount leaving rather than fixing
 it, so retaining more than required is valid, and it never reads output 1's amount.
 
-The beneficiary nets `ALLOWANCE_AMOUNT` minus the [fee](../../glossary.md#fee), with the fee coming out of that
+The beneficiary nets `ALLOWANCE_AMOUNT` minus the [fee](https://docs.simplicity-lang.org/glossary/#fee), with the fee coming out of that
 same slack, because `enforce_single_input()` doesn't leave anywhere else for it to come
 from.
 
 ### `same_asset()` checks assets as well as amounts
 
-Anyone can issue an [Elements](../../glossary.md#elements) [asset](../../glossary.md#asset) carrying any amount at no cost, so comparing amounts
+Anyone can issue an [Elements](https://docs.simplicity-lang.org/glossary/#elements) [asset](https://docs.simplicity-lang.org/glossary/#asset) carrying any amount at no cost, so comparing amounts
 alone is satisfiable with worthless tokens. `partial_withdrawal()` reads both the
 covenant's balance and output 0's amount through `same_asset()`, which asserts the two are
 denominated in the same asset and returns the amounts from that same call. The amounts
@@ -91,7 +91,7 @@ wallet with no `fee` keyword still build a correct withdrawal.
 
 ### `enforce_single_input()`
 
-Exactly one [input](../../glossary.md#input), always. Two consequences shape everything downstream. Fees can only
+Exactly one [input](https://docs.simplicity-lang.org/glossary/#input), always. Two consequences shape everything downstream. Fees can only
 come out of the allowance's own balance, since no outside input can help pay them. And two
 UTXOs sent to the same contract address are two separate instances that can never be
 merged, so paying the address a second time doesn't top up the first.
@@ -100,7 +100,7 @@ The same rule limits the covenant to the network's policy asset: Liquid bitcoin 
 test Liquid bitcoin (tLBTC) on testnet. The fee
 has to be paid in that asset, and with the covenant as the only input nothing else can
 supply it. Funded with any other asset, every partial withdrawal could carry only a
-zero-value fee output, which [nodes](../../glossary.md#node) will generally not relay.
+zero-value fee output, which [nodes](https://docs.simplicity-lang.org/glossary/#node) will generally not relay.
 
 ### `enforce_relative_distance()`
 
@@ -110,7 +110,7 @@ outright, and it requires transaction version 2 or later.
 
 `MIN_DISTANCE` is a count of blocks. The contract checks that the spending transaction's
 `nSequence` field encodes at least that many, and the node enforces the encoded distance
-against the funding UTXO's own confirmation [height](../../glossary.md#height) under BIP68. [Liquid](../../glossary.md#liquid) blocks come from
+against the funding UTXO's own confirmation [height](https://docs.simplicity-lang.org/glossary/#height) under BIP68. [Liquid](https://docs.simplicity-lang.org/glossary/#liquid) blocks come from
 scheduled signers rather than proof-of-work search, so block time is about one minute with
 very low variance and "N blocks" translates reliably to "about N minutes".
 
@@ -123,7 +123,7 @@ partial withdrawal.
 
 Liquid outputs can hide their asset and amount. That default is the right one in general,
 but a covenant that reasons about its own value can't read a blinded amount: this
-contract panics on one. A [confidential](../../glossary.md#confidential) output sent to the covenant address permanently
+contract panics on one. A [confidential](https://docs.simplicity-lang.org/glossary/#confidential) output sent to the covenant address permanently
 strands the funds.
 
 The decision is per output rather than per transaction:
@@ -154,7 +154,7 @@ manifest says what a transaction for this covenant looks like, so the page doesn
 say it in code.
 
 `utxo_types.allowance` names the UTXO shape the contract produces, pointing at the `.simf`
-source and mapping compile-time [parameter](../../glossary.md#parameter) names to where their values come from.
+source and mapping compile-time [parameter](https://docs.simplicity-lang.org/glossary/#parameter) names to where their values come from.
 `contract_templates.allowance_contract.fields` declares the three parameters with types.
 Then three actions: the contract's two spend paths, plus `Fund`, which is an ordinary
 wallet payment to the covenant address and corresponds to no branch of the contract at
@@ -218,11 +218,11 @@ known-good manifest for a different contract.
 The page used in the HOWTO carries both signers, and they are two ends of a range rather
 than rival technologies to pick between.
 
-**In the page**, through [LWK](../../glossary.md#lwk) compiled to wasm: the page loads the
+**In the page**, through [LWK](https://docs.simplicity-lang.org/glossary/#lwk) compiled to wasm: the page loads the
 library, compiles the contract, derives the address, builds the transaction and signs it
 with a key in `localStorage`. Steps 4 to 10 work this way.
 
-**In a wallet**, through a manifest: the page hands [Humid](../../glossary.md#humid)
+**In a wallet**, through a manifest: the page hands [Humid](https://docs.simplicity-lang.org/glossary/#humid)
 `txmanifest.humid.json` and the contract source, and the extension compiles, builds, signs
 and broadcasts, showing the user its own confirmation. Step 11 works this way.
 
@@ -242,7 +242,7 @@ does", and it is worth being precise about which parts, because the answer decid
 a 15 MB wasm module has to be in the page at all:
 
 - **Compiling the contract and deriving its address is the irreducible one.** Nothing in
-  plain JavaScript computes a [CMR](../../glossary.md#cmr) or a Taproot output key for a [SimplicityHL](../../glossary.md#simplicityhl) [program](../../glossary.md#program).
+  plain JavaScript computes a [CMR](https://docs.simplicity-lang.org/glossary/#cmr) or a Taproot output key for a [SimplicityHL](https://docs.simplicity-lang.org/glossary/#simplicityhl) [program](https://docs.simplicity-lang.org/glossary/#program).
   Any feature that verifies terms, shows a user which contract they are about to fund, or
   supports more than one set of compile-time parameters needs this, and needs it in the
   page.
@@ -344,7 +344,7 @@ Do not run any of this against mainnet. Moving this design to mainnet involves t
 of change: some mechanical, some that need real engineering, and some parts that stay the
 same.
 
-Mechanical swaps: the chain parameter, the [Esplora](../../glossary.md#esplora) and Waterfalls endpoints, the real LBTC asset id
+Mechanical swaps: the chain parameter, the [Esplora](https://docs.simplicity-lang.org/glossary/#esplora) and Waterfalls endpoints, the real LBTC asset id
 (confirmed live from a trusted source at deploy time, since it is security-critical), and
 the address encodings.
 
@@ -361,7 +361,7 @@ Five things are engineering rather than configuration:
 - **An indexer.** It needs infrastructure the deploying party controls, rather than a shared
   public Esplora instance.
 
-Unchanged: the contract source, since [Simplicity](../../glossary.md#simplicity) covenants are chain-parameter-agnostic at
+Unchanged: the contract source, since [Simplicity](https://docs.simplicity-lang.org/glossary/#simplicity) covenants are chain-parameter-agnostic at
 the script level; the transaction shapes; and the core indexer logic.
 
 ---
