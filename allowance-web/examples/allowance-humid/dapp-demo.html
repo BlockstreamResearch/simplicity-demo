@@ -356,7 +356,7 @@ async function invokeHumid(method, params) {
 
 // ---------- client-side BIP32 derivation ----------
 // The same CKDpub derivation the README describes, using @noble rather than a
-// hand-rolled implementation of the curve maths.
+// hand-rolled implementation of the curve math.
 // The raw descriptor stays visible below the derived key specifically so this is
 // checkable, not just trusted: for an already-set-up wallet, the derived value
 // should reproduce whatever pubkey you derived and saved by hand before.
@@ -673,7 +673,7 @@ async function claimInstance(txid, vout, action, btn) {
   const key = `${txid}:${vout}`;
   // Per-UTXO lock (from before) plus a page-wide one: there is exactly one shared
   // confirm modal, so at most one claim may be in its confirm-or-build phase at a
-  // time, full stop, not just the same instance. This is what actually prevents
+  // time across all instances, not just per instance. This is what actually prevents
   // the scenario that caused the listener issue above, rather than only handling
   // it gracefully if it happens.
   if (claimsInFlight.size > 0) {

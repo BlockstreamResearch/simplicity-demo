@@ -12,8 +12,8 @@ RPC → `processConfidentialTransaction`), not hand-built transactions. The demo
 manifest and contract are alongside this file. This file is the upstream-facing summary:
 one entry per distinct Humid defect, file/line, current status.
 
-Tally as of 2026-10-07: **6 distinct bugs found, 2 fixed (locally only, not upstream),
-4 still open.** Both local fixes ship as one patch, `humid-allowance-fixes.patch` in
+Tally as of 2026-11-03: **9 distinct bugs found, 2 fixed upstream (not yet released),
+7 still open.** Until a release includes them, both fixes ship as one patch, `humid-allowance-fixes.patch` in
 this directory, against base commit `7dc8535`. Three additional items are missing feature/UX gaps rather
 than bugs, listed separately at the end.
 
@@ -161,7 +161,7 @@ contract.
 
 ---
 
-## 5. FIXED LOCALLY (not upstream) — Relative timelocks categorically refused
+## 5. FIXED UPSTREAM (unreleased) — Relative timelocks categorically refused
 
 **Where:** `packages/tx-manifest/src/evaluation/inputRules.ts`, `transactionSequence()`
 
@@ -193,13 +193,12 @@ real, confirmed on the Liquid testnet explorer
 input sequence `10` — exactly `MIN_DISTANCE`, confirming a real BIP68 timelock was
 set, not merely not-refused).
 
-**Status:** fixed in the local working tree only (`git status` shows
-`packages/tx-manifest/src/evaluation/inputRules.ts` and `review/index.ts` modified,
-uncommitted). Not upstream.
+**Status:** fixed upstream by PR #48 (merged 2026-11-03 as `1875413`), after 1.1.4.
+Not yet in a release, so the 1.1.4 tag still needs the patch.
 
 ---
 
-## 6. FIXED LOCALLY (not upstream) — Actions whose only output is policy-asset "change" are wrongly refused as "pays nothing"
+## 6. FIXED UPSTREAM (unreleased) — Actions whose only output is policy-asset "change" are wrongly refused as "pays nothing"
 
 **Where:** `packages/tx-manifest/src/review/index.ts` (output-construction loop, the
 `surplus` calculation) and
@@ -278,14 +277,120 @@ signed and broadcast, closing out an allowance instance —
 (`e1bee73eb719e66edd4e7afecd525826790fddeeef90cf1e73624685dc294126`) confirms the change
 did not disturb the path that already worked.
 
-**Status:** fixed in the local working tree only, shipped as the second half of
-`examples/allowance-humid/humid-allowance-fixes.patch` in the demo repo. Not upstream.
-Both bugs confirmed still present at `cb1b71c` ("release: 1.1.2"), whose five relevant
-files are byte-identical to `7dc8535`.
+**Status:** fixed upstream by PR #49 (merged 2026-11-03 as `aea9b4c`), after 1.1.4. Not
+yet in a release. Until one ships, the second half of
+`examples/allowance-humid/humid-allowance-fixes.patch` in the demo repo applies the same
+fix to the 1.1.4 tag, which still has both bugs.
 Same category as #5 — an overly strict precondition that doesn't account for something
 correct happening later in the same area of code — and as with #5 there was no
 manifest-side workaround, since the defect is in the refusal rather than in anything
 `txmanifest.json` can express.
+
+---
+
+Entries 7–9 were found on 2026-11-03 and read against `1875413` (`1.1.4-10-g1875413`).
+They share one cause: Humid's fee handling assumes a congested chain, and it doesn't show
+the user what it's doing.
+
+## 7. OPEN — Fees use the next-block estimate even when the chain is idle
+
+**Where:** `packages/tx-manifest/src/review/index.ts:458` (`readFeeRate(FEE_TARGET_BLOCKS)`)
+and `:1054` (`const FEE_TARGET_BLOCKS = 1;`)
+
+Humid takes its fee rate from Esplora's `/fee-estimates` at a one-block target. On a
+quiet chain, that estimate reflects whatever the few senders happen to pay, not what it
+takes to get into the next block. On Liquid testnet from at least 23:50 UTC on 2026-11-02
+until about 03:49 UTC on 2026-11-03, one unrelated automated sender put two or three
+269 vB transactions with a flat 500-sat fee into nearly every block. That held the
+one-block estimate at 1.855 sat/vB (`/fee-estimates` returned it for every target from
+1 to 25). Blocks held only a few transactions, so anything above the 0.1 sat/vB relay
+minimum confirmed in the next block. Transactions at 0.137, 0.219, 0.277 and 0.36 sat/vB
+were mined in the same blocks as the 1.858 sat/vB ones. When the sender stopped, the
+estimate fell to 0.136 sat/vB.
+
+Effect on this contract:
+
+| Transaction | vsize | Rate | Fee |
+| --- | --- | --- | --- |
+| `PartialWithdraw` `039b2be6f3612d68fe0472edaec814f9d43cda5472a2005dc3af8a47996aa3fb` (height 2690073) | 412.5 vB | 1.855 sat/vB | 767 sats |
+| `FullWithdraw` `afbe0e6f37fc65a4588d3587bd1660a147b9e2b374f750f8318bdfbc40ab7f49` (height 2690182) | 273.5 vB | 0.136 sat/vB | 38 sats |
+
+The `PartialWithdraw` would have confirmed just as fast for about 57 sats. The same rate
+also sets the fee reserve, so the inflated estimate raised it too (see #9).
+
+**Suggested fix:** before using the estimate, check `/mempool`. When it holds less than a
+block's worth of transactions (2,826 vB at the time), use the relay minimum. Otherwise,
+or as well, use a longer target or cap the estimate, and let the dapp or the user set or
+override the rate.
+
+**Status:** open.
+
+---
+
+## 8. OPEN — The confirmation popup understates the fee Humid then pays
+
+**Where:** `packages/tx-manifest/src/fee.ts` (`estimateVsize`, `estimateFeeSats`), called
+at `packages/tx-manifest/src/review/index.ts:862`
+
+For `PartialWithdraw` `039b2be6…` above, the popup showed a fee of 511 sats, and Humid
+then paid 767, which `processConfidentialTransaction` reported as `feeSats`. The final
+fee comes from the builder's `finalizeTransaction()` on the real transaction, but the
+popup's figure comes from `estimateFeeSats()`, and it falls short in two ways:
+
+- **Missing outputs.** `outputs: outputs.length` counts only `review.outputs`. The
+  policy-asset change output is deferred to `addChange()` (see #6), and the fee output
+  isn't counted, so the shape had one output for a transaction with three. 121 + 87 + 67
+  = 275 vB at 1,855 sat/kvB is exactly 511 sats.
+- **A fixed covenant-input size.** `PER_COVENANT_INPUT` is 87 vB. This contract's
+  input carries a 674-byte Simplicity witness, which makes it about 210 vB, and the size
+  of a Simplicity witness varies by contract.
+
+The user approves one fee, and Humid pays another that's half as large again.
+
+**Suggested fix:** show the fee from the finalized transaction, which Humid already
+builds before broadcasting. Otherwise, count the deferred change and fee outputs and
+size covenant inputs from their witness.
+
+**Status:** open.
+
+---
+
+## 9. OPEN — A covenant balance below the fee reserve is refused as a timelock problem
+
+**Where:** `packages/tx-manifest/src/review/index.ts:609–615` (`fundAssets` with
+`feeSats: feeHeadroomSats(...)`), `:1056–1058` (`feeHeadroomSats`), and `:765–772` (the
+`relativeTimelockPlacement` check from #5)
+
+Before coin selection, Humid reserves `Math.ceil(feeRateSatsPerKvb)` sats for the fee:
+the fee for 1,000 vB. If a covenant input holds less than the reserve, coin selection
+adds a wallet coin to make up the difference. For a timelocked covenant input, the
+patched check from #5 then correctly refuses, because the wallet coin would inherit the
+timelock. The user sees:
+
+```
+FullWithdraw failed: Input allowance_in asks for a relative timelock (sequence 3), and
+this wallet sets one sequence for the whole transaction. 1 other input would inherit
+that wait, measured against its own age rather than allowance_in's, so nothing would
+relay the transaction until every one of them is that old as well.
+  reject: unimplemented-construct
+  reason: invalid_manifest_request
+```
+
+This was a `FullWithdraw` of a 100-sat instance at 0.136 sat/vB, a 136-sat reserve. The
+real fee would have been about 38 sats, the same as the 300-sat `FullWithdraw` above,
+which succeeded. Under #7's inflated estimate, the reserve was 1,855 sats, so any balance
+below that would have been refused.
+
+The refusal is correct, but it's about the wrong thing: the user can't tell that the
+balance is too small for the fee, or that nothing they do with timelocks will help. With
+an empty wallet, the user would presumably see `shortfall` instead.
+
+**Suggested fix:** when a covenant input with a relative timelock can't cover the
+reserve, refuse with a fee message that gives the balance and the reserve. Separately,
+size the reserve from the transaction's estimated vsize rather than a flat 1,000 vB.
+
+**Status:** open. Workaround: keep a covenant's final balance well above the reserve,
+for example equal to the allowance.
 
 ---
 

@@ -7,8 +7,7 @@ a Humid checkout and rebuild:
     bun run build        # then reload the extension at chrome://extensions
 
 Applies to:  https://github.com/BlockstreamResearch/humid
-Verified against both `7dc8535` ("Dev (#19)") and `cb1b71c` ("release: 1.1.2"), which
-are byte-identical in all five files touched here.
+Verified against Humid 1.1.4 (`a6d211d`).
 
 Check whether either fix has landed upstream before applying. If both have, you do not
 need this file. The quickest test: grep for the two refusal strings quoted below. If

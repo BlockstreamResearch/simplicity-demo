@@ -1,4 +1,4 @@
-# Allowance covenant driven by `lwk_wasm`: single-page demo
+# Allowance covenant built on `lwk_wasm`: single-page demo
 
 The whole allowance lifecycle in one static HTML file: compile `allowance.simf` in the
 browser, derive its covenant address, fund it, index live instances, and withdraw.
@@ -19,8 +19,8 @@ does not.
 > resolving is not the same as semantics being right. Each numbered step is an independent
 > checkpoint and prints raw errors on purpose.
 
-Liquid **testnet** only. The wallet mnemonic and the beneficiary's secret key live in
-`localStorage` in plaintext: play money, nothing else, ever.
+Liquid **testnet** only. The wallet mnemonic and the beneficiary's secret key are stored in
+`localStorage` in plaintext, so use the page only with testnet funds.
 
 ## Setup
 
@@ -45,7 +45,7 @@ simplicity = ["lwk_simplicity"]
    as a `file:` dependency, and it needs the *bundler* target. Building the web target into
    `pkg/` overwrites that and breaks every Humid wallet call with
    `WebAssembly.instantiate(): Import #0 "wbg": module is not an object or function`,
-   because the bundler-target glue (`lwk_wasm_bg.js`) is left behind, stale, next to a
+   because the bundler-target glue code (`lwk_wasm_bg.js`) is left behind, stale, next to a
    `.wasm` it no longer matches. If you have already done this, restore Humid with
    `wasm-pack build --release --target bundler -- --features simplicity`, then
    `bun install && bun run build`.
@@ -54,7 +54,7 @@ simplicity = ["lwk_simplicity"]
    it while iterating, either use `--dev` (no `wasm-opt`, debug build, slower at runtime)
    or set `[package.metadata.wasm-pack.profile.release] wasm-opt = false`.
 
-2. Copy the two files this page needs into `vendor/` (git-ignored, since the wasm is ~14 MB):
+2. Copy the two files this page needs into `vendor/` (git-ignored, since the wasm is about 15 MB):
    ```
    mkdir -p vendor
    cp <lwk>/lwk_wasm/pkg-web/lwk_wasm.js vendor/
@@ -78,15 +78,15 @@ point the import in `index.html` at wherever your package manager puts it.
 
 ## What the page does, step by step
 
-1. **Load the library**: initialises the wasm and asserts the Simplicity classes are
+1. **Load the library**: initializes the wasm and asserts the Simplicity classes are
    actually present, with the rebuild command in the error if they aren't. This is the
-   check worth running first: a feature-off build fails here rather than confusingly later.
+   check worth running first: a feature-off build fails here rather than with a less clear error later.
 2. **Wallet**: a single-key LWK wallet (`Signer` → `wpkhSlip77Descriptor` → `Wollet`),
    with a Waterfalls scan, balance, and a faucet button.
 3. **Beneficiary key**: `Keypair` from 32 random bytes, exposing `.xOnlyPublicKey` as
-   `BENEFICIARY_KEY` and signing the witness with `.signSchnorr()`. Note how much simpler
-   this is than the browser-extension path, where no API exposes your own pubkey and the
-   key has to be recovered by BIP32-deriving a BIP84 descriptor by hand.
+   `BENEFICIARY_KEY` and signing the witness with `.signSchnorr()`. The browser-extension
+   path has no API that exposes your own pubkey, so there the key has to be recovered by
+   BIP32-deriving a BIP84 descriptor by hand.
 4. **Compile**: the three compile-time params become `SimplicityArguments`
    (`fromU256Hex` for the pubkey, `fromU64` for the amount, `fromU16` for the distance),
    then `SimplicityProgram.load(source, args)` and `createP2trAddress(NUMS_KEY, network)`.
@@ -108,13 +108,13 @@ point the import in `index.html` at wherever your package manager puts it.
 
 ## The two signing paths
 
-The page can drive the same contract two ways, chosen in the "Who signs" section.
+The page can use the same contract in two ways, chosen in the "Who signs" section.
 
 **This page** (default): `lwk_wasm` compiles the contract, derives the address, builds the
-PSET, signs and broadcasts, all in the browser. Keys live in `localStorage`. No extension,
-no manifest.
+PSET, signs and broadcasts, all in the browser. Keys are stored in `localStorage`. This path doesn't use an
+extension or a manifest.
 
-**Humid extension**: the page hands Humid `txmanifest.humid.json` plus the contract source
+**Humid extension**: the page passes Humid `txmanifest.humid.json` plus the contract source
 and it does the compiling, signing and broadcasting itself, showing its own confirmation.
 This is the more realistic architecture: a real wallet that has never seen this covenant
 before learns it from a manifest. Requirements and caveats:
@@ -126,11 +126,11 @@ before learns it from a manifest. Requirements and caveats:
   rejects any input declaring `sequence.relative_blocks` without checking the input count.
 - `FullWithdraw` is broken in *unpatched* Humid: it refuses an action whose only output is
   policy-asset change with *"pays nothing, so there is nothing to build."* The page warns
-  about this in the confirmation dialog rather than letting it surprise you.
+  about this in the confirmation dialog before the failure occurs.
 - Humid signs with its own BIP84 key at `m/84'/1'/0'/0/0`, which it exposes nowhere in its
   UI. "Get my key from Humid" recovers it by calling `getWalletDescriptor` and doing two
   non-hardened BIP32 steps, printing the raw descriptor alongside so the derivation is
-  checkable. The curve maths is a dynamic `import()` from a CDN, so the local-only path keeps
+  checkable. The curve math is a dynamic `import()` from a CDN, so the local-only path keeps
   working with no network.
 - **The two paths cannot share an allowance.** Different signer means a different
   `BENEFICIARY_KEY`, which means a different compiled address. Pick the signer before
@@ -147,45 +147,57 @@ reads, with no unknown or ignored keys. So the `0.1.0`-versus-`0.3.0` difference
 
 ## Running it as two separate parties
 
-The page carries both roles, marked on each step, and the realistic test is two browser
-profiles: each profile has its own `localStorage`, so each holds exactly one party's keys.
+The page provides both roles, one per tab, and the realistic test is two browser profiles:
+each profile has its own `localStorage` (and, in Humid mode, its own Humid), so each holds
+exactly one party's keys.
 
-**Beneficiary**, in their own profile: load the library (1), generate the beneficiary key
-(3), send the benefactor the x-only pubkey it prints. Nothing else. No wallet, no mnemonic,
-no funds, no chain scan.
+The beneficiary's key has to come from whatever will sign the claim. The benefactor's
+signer doesn't matter, since funding is only a payment to the covenant address, so the two
+parties can use different signers.
 
-**Benefactor**, in theirs: load (1), open and fund a wallet (2), paste the beneficiary's
-pubkey into step 4 along with the amount and interval, compile, then **Copy terms** and send
-the blob over. Fund the allowance (5).
+**Beneficiary**, in a separate profile, gets the beneficiary key and sends the 64 hex characters to
+the benefactor:
 
-**Beneficiary** again: paste the blob into step 4's terms field and press **Load pasted
-terms**. The page re-derives the covenant address from the three params and refuses to
-continue if it disagrees with the address in the blob, so altered or garbled terms are
-caught before anything is paid, rather than quietly producing a different covenant. It also
-says whether `BENEFICIARY_KEY` is this browser's key, i.e. whether you can actually claim or
-are only watching. Then step 6: paste a payout address (or open a wallet and use its own),
-refresh, and claim whichever instances are ready.
+- Signing with the page: on **I'm the beneficiary**, press **Generate / show my key**. This
+  needs no wallet, mnemonic or funds.
+- Signing with Humid: under "Who signs", select **Humid extension**, press **Check for
+  Humid**, then **Get my key from Humid** in the beneficiary's Humid.
 
-Claiming genuinely requires only the beneficiary key, the terms, and somewhere to be paid.
+**Benefactor**, in another profile: on **I'm the benefactor**, paste that key into **Beneficiary's
+public key**, set the amount and interval, press **Compile & derive address**, then
+**Copy** under "Hand the terms to the beneficiary" and send the terms. Fund the
+allowance from either signer. In Humid mode the compile output warns that the key isn't the
+one Humid last reported; with two parties that's expected.
+
+**Beneficiary** again: paste the terms under **Load the allowance** and press **Load**. The
+page re-derives the covenant address from the three params and refuses to continue if it
+disagrees with the address in the terms, so altered or garbled terms are caught before
+anything is paid, rather than producing a different covenant. Then check **can
+withdraw** in the status panel. It reads "yes" only when this profile's key, or this Humid's
+key after **Get my key from Humid**, is the `BENEFICIARY_KEY` the terms name; otherwise you
+are only watching. To claim, set a payout address (any unblinded address, or **Use my wallet
+address** with a wallet open; Humid pays to its own change address instead), refresh, and
+press **Claim** on whichever instances are ready.
+
+Claiming requires only the beneficiary key, the terms, and somewhere to be paid.
 In particular the beneficiary never needs a file the benefactor created: the covenant
 address is derived from public values, and the current UTXO is found by looking at the chain.
-That property is what makes the role separation real rather than cosmetic.
 
 ## Blinded vs. explicit: which outputs must be which
 
 Liquid blinds by default, and that default is the right one in the abstract: confidential
 transactions hide asset and amount from everyone but the parties. But a covenant that
 *reasons about its own value* cannot read a blinded amount, so some smart-contract
-functionality is incompatible with the thing the network is trying to encourage.
+functionality is incompatible with the confidentiality the network encourages.
 
-How much that *hurts* depends heavily on the library, and this demo picked the harder one.
-LWK is a confidential descriptor-wallet library at heart, and its defaults sit on the
-confidential side of the tension at every turn: `wpkhSlip77Descriptor()` means
+How much this matters depends heavily on the library, and this demo uses the more difficult
+one. LWK is primarily a confidential descriptor-wallet library, and its defaults favor
+confidentiality throughout: `wpkhSlip77Descriptor()` means
 `wollet.address()` is confidential by construction, `addLbtcRecipient` blinds while
-`addExplicitRecipient` is the separate, less obvious call, and `Address.parse` refuses a
-non-blinded address outright. This contract wants the opposite shape (explicit outputs, and
-an input no wallet owns), so the page is crossing the library's grain throughout, and both
-of the real bugs found while getting it working were at that crossing.
+`addExplicitRecipient` is the separate, less obvious call, and `Address.parse` refuses any
+non-blinded address. This contract wants the opposite shape (explicit outputs, and
+an input no wallet owns), so the page works against the library's defaults throughout, and changes
+to those calls need the most care.
 
 A covenant-first library has much less of this. `txmanifest-wallet` treats an explicit
 covenant output as the default rather than an opt-out, and states output shapes
@@ -196,7 +208,7 @@ manifest's declared value, so an author who forgets the field still cannot stran
 So do not read this page as "what Liquid covenant development feels like"; read it as what
 it feels like through a general-purpose confidential wallet library.
 
-The asymmetry of the two mistakes is worth internalising whichever library you use:
+The two mistakes have very different consequences, whichever library you use:
 forgetting on a *covenant* output strands the funds forever and silently, while forgetting
 elsewhere merely raises a confusing error.
 
@@ -225,18 +237,18 @@ output 1 is blinded. What blinding the payout actually hides is the destination 
 linkage to the beneficiary's other coins, which is worth having, but not amount privacy. A contract
 whose covenant value *didn't* have to be public would get far more from it.
 
-## Details that will bite you if you change it
+## Constraints to keep when changing the page
 
 - **Builder methods move the builder.** `PsetBuilder.addInput`/`addOutput`, and the
   `PsetInputBuilder`/`PsetOutputBuilder` setters, are `mut self` in Rust, so each call frees
-  the JS handle it was called on and returns a new one. Chaining is fine; saving a handle and
+  the JS handle it was called on and returns a new one. Chaining calls is safe; saving a handle and
   calling two methods on it is not, and the symptom is `null pointer passed to rust` raised
   from somewhere unrelated. Unlike the `TxOut` hazard below, nothing in the typings warns
   about this: it is only visible in the Rust signatures.
 - **The `TxOut` arrays are consumed.** `getSighashAll`, `run` and `finalizeTransaction`
-  each destroy the array passed to them; the upstream typings say so outright. The page
+  each destroy the array passed to them; the upstream typings document this. The page
   rebuilds a fresh `TxOut` for every call via `freshWitnessUtxo()`; reusing one is a
-  use-after-free that will look like a nonsense error somewhere else.
+  use-after-free that surfaces as an unrelated error elsewhere.
 - **Esplora has no per-output endpoint.** The witness UTXO comes from fetching
   `/tx/{txid}/hex` and taking `.output(vout)`. This is the one job `smplx-wasm` cannot do
   (it requires a pre-encoded `tx_out_hex` and exposes no transaction parser), and the
@@ -269,9 +281,9 @@ whose covenant value *didn't* have to be public would get far more from it.
   so nothing outside the covenant can contribute to the fee. `WITHDRAW_FEE_SATS` is a
   flat constant taken from the payout; real fee estimation is left out on purpose.
 
-## Known unknowns
+## Open questions
 
-Specific things most likely to be wrong, in rough order of suspicion:
+The assumptions most likely to be wrong, roughly from most to least likely:
 
 1. **The witness value encoding.** `SIGNATURE` is built with
    `SimplicityTypedValue.fromByteArrayHex(sig)`. If the compiler wants a declared

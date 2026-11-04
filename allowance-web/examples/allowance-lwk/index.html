@@ -120,10 +120,10 @@ to the Humid wallet extension as a txmanifest.</p>
   <code>BENEFICIARY_KEY</code>, and therefore the covenant address, differs between them.
   Pick one before compiling.</p>
   <label><input type="radio" name="signer" value="page" checked> <strong>This page</strong>:
-  <code>lwk_wasm</code> compiles, signs and broadcasts here; keys live in this browser's
+  <code>lwk_wasm</code> compiles, signs and broadcasts here; keys are stored in this browser's
   <code>localStorage</code>.</label>
   <label><input type="radio" name="signer" value="humid"> <strong>Humid extension</strong>:
-  this page hands Humid a <code>txmanifest.json</code> and it does the compiling, signing
+  this page passes Humid a <code>txmanifest.json</code> and it does the compiling, signing
   and broadcasting itself, showing you its own confirmation.</label>
   <div id="humid-box" hidden>
     <p class="note">Humid reads <code>txmanifest.humid.json</code> from this directory
@@ -160,7 +160,7 @@ can play both parties; use two profiles to keep them separate.</p>
 <section data-signer="page">
   <h2>Your wallet</h2>
   <p class="note">A single-key LWK wallet from a BIP39 mnemonic kept in this browser's
-  <code>localStorage</code>, in plaintext. Testnet play money only. Never put a real
+  <code>localStorage</code>, in plaintext. Testnet funds only. Never put a real
   mnemonic here.</p>
   <label for="mnemonic">Mnemonic (leave blank to generate one)</label>
   <input type="text" id="mnemonic" class="mono" placeholder="twelve words, or leave blank">
@@ -177,7 +177,7 @@ can play both parties; use two profiles to keep them separate.</p>
   <p class="note">These three values are compiled <em>into</em> the contract, so they also
   determine its address. A different value gives a different, unrelated allowance at a
   different address.</p>
-  <label for="benkey">Beneficiary's public key (they send you this)</label>
+  <label for="benkey">Beneficiary's public key (the beneficiary sends you this)</label>
   <input type="text" id="benkey" class="mono" placeholder="64 hex characters (BIP340 x-only pubkey)">
   <span class="hint-inline" id="hint-benkey"></span>
   <div class="row">
@@ -304,7 +304,7 @@ can play both parties; use two profiles to keep them separate.</p>
   <h2>How this works</h2>
 
   <h3>What the contract enforces</h3>
-  <p>Three values are fixed at compile time and baked into the address:
+  <p>Three values are fixed at compile time and compiled into the address:
   <code>BENEFICIARY_KEY</code>, <code>ALLOWANCE_AMOUNT</code> and <code>MIN_DISTANCE</code>.
   Every spend needs a BIP340 signature by the beneficiary's key, a BIP68 relative timelock of
   at least <code>MIN_DISTANCE</code> blocks since the UTXO was created, transaction version 2
@@ -341,7 +341,7 @@ can play both parties; use two profiles to keep them separate.</p>
   wallet.</p>
 
   <h3>Keys and custody</h3>
-  <p>Both the wallet mnemonic and the beneficiary's secret key sit in this browser's
+  <p>Both the wallet mnemonic and the beneficiary's secret key are stored in this browser's
   <code>localStorage</code> in plaintext. Use them only for testnet funds.</p>
 </section>
 
@@ -439,8 +439,8 @@ const NEXT_STEPS = [
    "and getSighashAll/run/finalizeTransaction consume the TxOut array, so build a fresh one " +
    "for each call and reassign after every builder step."],
   [/blinded address but got a non-blinded/i,
-   "Address.parse() demands a confidential address. Covenant work needs unconfidential " +
-   "ones, so use new Address(s) and check the network with isMainnet()."],
+   "Address.parse() requires a confidential address. Covenant outputs need unconfidential " +
+   "addresses, so use new Address(s) and check the network with isMainnet()."],
   [/missing:|features simplicity/i,
    "The wasm build has no Simplicity support. Rebuild with: wasm-pack build --release " +
    "--target web -- --features simplicity, then copy lwk_wasm.js and lwk_wasm_bg.wasm " +
@@ -481,7 +481,7 @@ const THROTTLE_STANDDOWN_MS = 300000;
 
 function noteThrottle(reason) {
   throttledUntil = Date.now() + THROTTLE_STANDDOWN_MS;
-  log("throttle signal (" + reason + "), standing down for "
+  log("Esplora is throttling requests (" + reason + "), pausing requests for "
       + Math.round(THROTTLE_STANDDOWN_MS / 60000) + " min");
 }
 
@@ -494,8 +494,8 @@ async function esplora(path, opts) {
   if (res.status === 429) {
     noteThrottle("HTTP 429");
     throw new Error(
-      "Esplora is rate-limiting us (HTTP 429). It refuses everything for a few minutes " +
-      "after a burst, so wait rather than retrying; automatic refreshing has backed off."
+      "Esplora is rate-limiting this page (HTTP 429). It refuses everything for a few minutes " +
+      "after a burst, so wait rather than retrying; automatic refreshing has slowed down."
     );
   }
   if (!res.ok) throw new Error(`Esplora ${path} → HTTP ${res.status}: ${body.slice(0, 300)}`);
@@ -1074,7 +1074,7 @@ $("btn-fund").onclick = async () => {
     if (usingHumid()) {
       // Humid compiles, funds, signs and broadcasts from the manifest; this page
       // supplies only the call-time parameters, and Humid shows its own confirmation.
-      show("out-fund", "Handing the Fund action to Humid. Confirm it in the extension…");
+      show("out-fund", "Passing the Fund action to Humid. Confirm it in the extension…");
       const result = await humidCall("Fund", {
         params: {
           BENEFICIARY_KEY: c.params.benkey,
@@ -1137,7 +1137,7 @@ $("btn-fund").onclick = async () => {
         "txid (if sent): " + tx.txid().toString() +
         "\noutputs: " + tx.outputs.length +
         "\nfee: " + tx.fee(policyAsset) + " sats" +
-        "\n\nTick “Broadcast for real” to send it.", "");
+        "\n\nSelect “Broadcast for real” to send it.", "");
       log("fund dry run ok, txid", tx.txid().toString());
       return;
     }
@@ -1222,7 +1222,7 @@ $("btn-status").onclick = () => {
 };
 
 let refreshing = false;   // guards a manual click racing another refresh
-let lastInstances = [];   // so cancelling a claim can re-render without refetching
+let lastInstances = [];   // so canceling a claim can re-render without refetching
 
 // A claim is "busy" from the click until it resolves, the confirmation dialog
 // included: that open-dialog window is what a plain in-flight flag misses.
@@ -1496,11 +1496,11 @@ async function doClaim(inst) {
           : "") +
         `${warnFull}`);
       if (!ok) {
-        show("out-claim", "Cancelled. Nothing was sent to Humid.", "");
+        show("out-claim", "Canceled. Nothing was sent to Humid.", "");
         return;
       }
 
-      show("out-claim", "Handing " + inst.action + " to Humid. Confirm it in the extension…");
+      show("out-claim", "Passing " + inst.action + " to Humid. Confirm it in the extension…");
       const result = await humidCall(inst.action, {
         params: {},
         // Double-nested on purpose: normaliseInstance() reads raw.instance.fields, not
@@ -1547,8 +1547,8 @@ async function doClaim(inst) {
 
     show("out-claim", "Waiting for you to confirm…");
     if (!await askConfirm(plan.summary)) {
-      show("out-claim", "Cancelled. Nothing was signed or sent.", "");
-      log("claim cancelled by user:", key);
+      show("out-claim", "Canceled. Nothing was signed or sent.", "");
+      log("claim canceled by user:", key);
       return;
     }
 
@@ -1627,7 +1627,7 @@ async function doClaim(inst) {
         "\nsize: " + finalTx.toBytes().length + " bytes" +
         "\npruned CMR from the local run: " + result.cmr.toString() +
         "\n\nThe contract accepted this spend when run locally, so the compile, the " +
-        "sighash and the signature are all good. Untick “Dry run” to send it.", "");
+        "sighash and the signature are all valid. Clear “Dry run” to send it.", "");
       log("dry run ok for", key, finalTx.txid().toString());
       return;
     }
@@ -1795,7 +1795,7 @@ async function humidCall(action, extra) {
 
 // Humid has no UI showing your own public key, so derive it from the descriptor it
 // will sign with: a BIP84 xpub already at m/84'/1'/0', plus two non-hardened steps
-// (external chain, first address). The curve maths comes from a dynamic import so the
+// (external chain, first address). The curve math comes from a dynamic import so the
 // local-only path keeps working with no network and no CDN.
 async function humidBeneficiaryKey() {
   const result = await invokeHumid("getWalletDescriptor", {
@@ -1851,7 +1851,7 @@ $("btn-humid-detect").onclick = async () => {
       "Humid is available on this page.\n" +
       "authorized session for this origin: " + (live ? "yes: " + Object.keys(scopes).join(", ") : "none") +
       "\n\n" + (live
-        ? "Actions should go straight through without a connect prompt."
+        ? "Actions should proceed without a connect prompt."
         : "Humid will ask you to connect the first time an action needs it. Expect that " +
           "prompt again whenever the extension's worker restarts or the wallet locks.") +
       "\n\nNext: “Get my key from Humid”, then compile with that key on the benefactor tab.",
@@ -1910,7 +1910,7 @@ function flash(id) {
   el.classList.add("arrived");
 }
 
-const asLbtc = (sats) => "≈ " + (Number(sats) / 1e8).toFixed(8) + " tLBTC";
+const asLbtc = (sats) => "= " + (Number(sats) / 1e8).toFixed(8) + " tLBTC";
 
 // Liquid blocks are ~1 minute and low-variance, so blocks translate honestly to time.
 function blocksAsTime(blocks) {
@@ -1928,12 +1928,12 @@ function updateHints() {
   const mineKey = benKeypair && benKeypair.xOnlyPublicKey.toString() === key;
   $("hint-benkey").textContent = !key
     ? (usingHumid()
-        ? "Press “Get my key from Humid” above. This must be the key Humid will sign with."
-        : "The beneficiary generates this on their own machine and sends you the public half.")
+        ? "The beneficiary sends this from “Get my key from Humid” in the beneficiary's Humid. Testing on your own, press it above."
+        : "The beneficiary generates this on a separate machine and sends you the public half.")
     : !keyOk
     ? "Not a valid key: expected exactly 64 hex characters, got " + key.length + "."
     : usingHumid()
-    ? "Make sure this came from “Get my key from Humid”. Any other key gives an address Humid cannot claim."
+    ? "This must be the key the beneficiary's Humid will sign with, from “Get my key from Humid” in that Humid. Any other key gives an address it cannot claim."
     : mineKey
     ? "This is this browser's own key: a single-wallet test."
     : "Looks like a valid x-only pubkey.";

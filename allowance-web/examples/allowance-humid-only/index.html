@@ -67,17 +67,17 @@
 <main>
 
 <h1>Allowance covenant <span class="tag">Humid only</span></h1>
-<p class="sub">The same contract as the sibling <code>allowance-lwk</code> demo, driven
-entirely through the Humid extension. <strong>No wasm, no build step, no toolchain</strong>:
+<p class="sub">The same contract as the sibling <code>allowance-lwk</code> demo, used
+entirely through the Humid extension, <strong>without wasm, a build step or a toolchain</strong>:
 one static HTML file plus the contract and its manifest. Humid does all the compiling,
 signing and broadcasting; this page only says what to do and keeps track of where the money
 is. Liquid testnet only.</p>
 
 <p class="sub"><strong>The steps run in order, top to bottom.</strong> The
-<b>beneficiary</b> does 1 and 2 and sends their key over; the <b>benefactor</b> does 3, 4
+<b>beneficiary</b> does 1 and 2 and sends the key to the benefactor; the <b>benefactor</b> does 3, 4
 and 5 and sends the completed terms back; the beneficiary does 6 and 7. Nothing asks you
-to scroll back up: the covenant address only exists after funding, so the handoff is 5
-and receiving it is 6.</p>
+to scroll back up: the covenant address only exists after funding, so sending the terms
+is step 5 and receiving them is step 6.</p>
 <p class="sub">One Humid wallet can play both roles, in which case you can skip 5 and 6
 entirely and just keep going. Two browser profiles, each with its own Humid, is the
 realistic two-party test.</p>
@@ -87,7 +87,7 @@ realistic two-party test.</p>
 <section>
   <h2>The contract</h2>
   <p class="note">Shared by both roles and filled in for you: funding writes them, watching
-  reads them. Paste either by hand if you were told it rather than sent a terms blob.</p>
+  reads them. Paste either by hand if you were told it rather than sent the terms.</p>
   <div class="row2">
     <div>
       <label for="address">Covenant address</label>
@@ -134,17 +134,17 @@ action?&rdquo; confirmation: that is where you approve each transaction.
   <h2>3 &middot; Choose the terms<span class="tag">benefactor</span></h2>
   <div>
     <p class="note">These three values are compiled into the contract, so they also fix its
-    address. They cannot be changed afterwards: a different value is a different, unrelated
+    address. They cannot be changed afterward: a different value is a different, unrelated
     allowance somewhere else.</p>
     <label for="benkey">Beneficiary public key (64 hex), yours if you are the
-    beneficiary (step 2 fills it in); otherwise the one they sent you</label>
+    beneficiary (step 2 fills it in); otherwise the one the beneficiary sent you</label>
     <input type="text" id="benkey" placeholder="64 hex characters">
     <label for="allowance">Withdrawable per period (sats)</label>
     <input type="number" id="allowance" value="5000" min="1">
     <label for="mindist">Blocks between withdrawals <span id="mindist-hint"></span></label>
     <input type="number" id="mindist" value="3" min="1" max="65535">
     <p class="note">Nothing to send yet: the covenant address is part of the terms and does
-    not exist until the allowance is funded, so the handoff is step 5.</p>
+    not exist until the allowance is funded, so you send the terms in step 5.</p>
   </div>
 </section>
 
@@ -155,7 +155,7 @@ action?&rdquo; confirmation: that is where you approve each transaction.
   <a href="https://liquidtestnet.com/faucet" target="_blank" rel="noopener">liquidtestnet.com/faucet</a>
   for testnet coins and wait about a minute. Step 2 derives the receive address to give it,
   and &ldquo;Check Humid's balance&rdquo; there confirms they arrived. Dry run first: it costs
-  nothing and proves the manifest and contract pair up.</p>
+  nothing and confirms that the manifest and the contract match.</p>
   <p class="note">Humid's receive address, from step 2:
   <code id="receive">not derived yet</code></p>
   <label for="amount">Amount to lock (sats)</label>
@@ -166,9 +166,9 @@ action?&rdquo; confirmation: that is where you approve each transaction.
 </section>
 
 <section>
-  <h2>5 &middot; Hand the terms over<span class="tag">benefactor</span></h2>
+  <h2>5 &middot; Send the terms<span class="tag">benefactor</span></h2>
   <p class="note">Now that the covenant address exists, the terms are complete and the
-  beneficiary can use them. Send this however you like, since none of it is secret. They paste it
+  beneficiary can use them. Send this however you like, since none of it is secret. The beneficiary pastes it
   into step 6.</p>
   <textarea id="termsout" rows="4" readonly placeholder="available once the covenant address is known"></textarea>
   <button id="copyterms" class="sec">Copy</button>
@@ -177,21 +177,21 @@ action?&rdquo; confirmation: that is where you approve each transaction.
 
 <section>
   <h2>6 &middot; Receive the terms<span class="tag">beneficiary</span></h2>
-  <p class="note">For the two-party case: paste the blob a benefactor sent you from their
+  <p class="note">For the two-party case: paste the terms a benefactor sent you from
   step 5, and this fills in everything above at once, the three terms and the covenant
   address, so you can watch and withdraw. <strong>Playing both roles in this one browser?
   Skip this; you already have all of it.</strong></p>
-  <p class="note">This unpacks rather than discovers. With no compiler here, the address it
+  <p class="note">This only reads the terms; it doesn't check them. With no compiler here, the address it
   names is taken on trust: nothing in this page can confirm those three values produce it.</p>
-  <textarea id="termsin" rows="3" placeholder='Paste the benefactor&apos;s blob: {"BENEFICIARY_KEY":"…","ALLOWANCE_AMOUNT":"5000","MIN_DISTANCE":3,"address":"tex1p…"}'></textarea>
-  <button id="loadterms" class="sec">Unpack these terms</button>
+  <textarea id="termsin" rows="3" placeholder='Paste the benefactor&apos;s terms: {"BENEFICIARY_KEY":"…","ALLOWANCE_AMOUNT":"5000","MIN_DISTANCE":3,"address":"tex1p…"}'></textarea>
+  <button id="loadterms" class="sec">Load these terms</button>
   <div class="out" id="out-termsin"></div>
 </section>
 
 <section>
   <h2>7 &middot; Withdraw<span class="tag">beneficiary</span></h2>
   <p class="note">Every UTXO at the covenant address is a separate allowance with its own
-  timelock, never summed and never mergeable. Each is labelled with the action its current
+  timelock, never summed and never mergeable. Each is labeled with the action its current
   balance makes valid.</p>
   <p class="note">The timelock measures only the <em>age of that UTXO</em>: the contract
   counts blocks since whichever transaction created it, and cannot tell, or care,
@@ -199,10 +199,10 @@ action?&rdquo; confirmation: that is where you approve each transaction.
   withdrawal. So the clock restarts after every partial withdrawal, and an instance you
   just created waits exactly as long as a freshly deposited one.</p>
   <p class="note">Refresh is manual on purpose: this is a shared public Esplora instance
-  that rate-limits hard after a burst.</p>
+  that strictly rate-limits requests after a burst.</p>
   <label><input type="checkbox" id="wd-broadcast"> Broadcast for real</label>
   <span class="hint-inline">Left unchecked, Humid builds and signs the withdrawal and sends
-  nothing, the same meaning as the box in step 4. Worth doing once per allowance.</span>
+  nothing, the same meaning as the box in step 4. It's worth doing once per allowance.</span>
   <button id="refresh">Refresh status</button>
   <div class="out" id="out-status"></div>
   <div class="wrap"><table id="rows" hidden>
@@ -390,7 +390,7 @@ function syncButtons() {
   $("loadterms").disabled = !pasted;
   $("loadterms").title = pasted
     ? ""
-    : "Nothing pasted. This unpacks a terms blob from a benefactor, and is unnecessary if you " +
+    : "Nothing pasted. This loads the terms a benefactor sends, and is unnecessary if you " +
       "are both parties in this browser.";
   $("findaddr").disabled = !txid;
   $("findaddr").title = txid ? "" : "No funding transaction id yet.";
@@ -474,14 +474,14 @@ $("loadterms").onclick = () => {
     const addr = $("address").value.trim();
     if (!addr) {
       show("out-termsin",
-        "Unpacked, but these terms carry no covenant address, so there is nothing to " +
+        "Loaded, but these terms carry no covenant address, so there is nothing to " +
         "watch yet. The benefactor has to fund the allowance first and then re-send the " +
-        "terms from their step 5.", "err");
+        "terms from step 5.", "err");
       return;
     }
 
     show("out-termsin",
-      "Unpacked:\n" +
+      "Loaded:\n" +
       "  allowance: " + $("allowance").value + " sats every " + $("mindist").value + " blocks\n" +
       "  address:   " + addr + "\n\n" +
       "Loading the instances at that address now. (The address is taken on trust: with no " +
@@ -595,9 +595,9 @@ async function addressFromTransactionHex(txHex) {
 }
 
 // ---- finding the covenant address from the chain --------------------------
-// With no compiler here the address has to be recognised in the funding transaction.
+// With no compiler here the address has to be recognized in the funding transaction.
 //
-// Never identify it by position. Confidential transactions deliberately randomise output
+// Never identify it by position. Confidential transactions deliberately randomize output
 // order, so "output 0 is the covenant" is wrong by design rather than merely fragile,
 // and this page did not build the transaction, Humid did. Identify it by shape instead: the
 // covenant is pay-to-taproot, while Humid's own change is BIP84 P2WPKH. If that is
@@ -629,7 +629,7 @@ async function findAddress(quiet) {
   const addr = covenantAddressFrom(await res.json(), $("amount").value.trim());
   if (!addr) {
     throw new Error(
-      "Could not tell which output is the covenant. Output order is randomised, so this " +
+      "Could not tell which output is the covenant. Output order is randomized, so this " +
       "page identifies it by shape (pay-to-taproot) and then by amount. If neither is " +
       "decisive it will not guess. Paste the covenant address into the box at the top of " +
       "the page by hand, or " +
@@ -725,7 +725,7 @@ $("fund").onclick = async () => {
     const bcast = $("broadcast").checked;
     if (!(Number(amount) > 0)) throw new Error("Enter an amount above zero.");
 
-    show("out-fund", "Handing Fund to Humid. Confirm it in the extension…");
+    show("out-fund", "Passing Fund to Humid. Confirm it in the extension…");
     const r = await act("Fund", {
       params: { ...t, MIN_DISTANCE: String(t.MIN_DISTANCE), amount_sat: amount },
       broadcast: bcast,
@@ -747,7 +747,7 @@ $("fund").onclick = async () => {
 
       if (local) {
         $("address").value = local; save();
-        note = "\n\ncovenant address, read straight out of the transaction:\n" + local +
+        note = "\n\ncovenant address, read from the transaction:\n" + local +
                "\n\nYou can send the terms to the beneficiary now. Instances will not appear " +
                "below until Esplora indexes the transaction, usually within a minute.";
         log("covenant address from transactionHex", local);
@@ -921,11 +921,11 @@ async function claim(r) {
     `Humid builds and signs this from the manifest and pays the withdrawal into your own ` +
     `Humid wallet (as its change), then shows its own confirmation with the real amounts.` +
     (dry ? `\n\nDRY RUN: broadcast:false, so nothing will be sent.` : "") + extra);
-  if (!ok) { show("out-claim", "Cancelled. Nothing was sent to Humid."); return; }
+  if (!ok) { show("out-claim", "Canceled. Nothing was sent to Humid."); return; }
 
   claiming = true;
   render();        // repaint with every button disabled, not just this one
-  show("out-claim", `Handing ${r.action} to Humid. Confirm it in the extension…`);
+  show("out-claim", `Passing ${r.action} to Humid. Confirm it in the extension…`);
   try {
     const t = terms();
     const res = await act(r.action, {
@@ -952,7 +952,7 @@ async function claim(r) {
       (sent && r.action === "PartialWithdraw"
         ? "\n\nThe remainder went back to the same covenant address as a new instance. It " +
           "will show above once this transaction confirms, starting its timelock again from " +
-          "that block: the contract measures the new UTXO's age, not yours."
+          "that block: the contract measures the new UTXO's age, not the original deposit's."
         : sent
         ? "\n\nThat was the whole remaining balance, so this allowance is closed."
         : "") +

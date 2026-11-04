@@ -97,7 +97,7 @@ From `allowance-web`, with Humid cloned there as in Step 11 of the HOWTO:
    It is matched to the manifest's `"./allowance.simf"` reference by filename.
 4. Read the verdict, construct table, and rewrite list.
 
-## How Humid exposes itself to a page
+## How Humid injects its API into a page
 
 A content script injects `window.humid = { request(args), on(args) }` into every page. Its
 `matches` covers `file://*/*`, `http://*/*` and `https://*/*`, so a same-machine demo
@@ -162,7 +162,7 @@ catch it, because `instance` is a generic `Record<string, unknown>` at that laye
 fails silently and surfaces much later as `"X is neither a parameter nor an argument of
 this action"` from code that never names `instance`.
 
-`state` has no such quirk: `review/index.ts` reads `request.state.utxos` directly,
+`state` doesn't have this problem: `review/index.ts` reads `request.state.utxos` directly,
 single-level.
 
 Both `instance` and `state` are unconditionally required for the withdraw actions, per
@@ -251,7 +251,7 @@ pointing it at `liquid.network`, which has gentler rate limits.
   the package outside tests and fixtures, and nothing in `evaluate.ts`, `plan.ts` or
   `references.ts` resolves it. Since `current/` is the fixture set `corpus.test.ts`
   expects to read in full, this is a gap between what is tested at the document level,
-  meaning parsing and normalising, and what works end to end against a live review.
+  meaning parsing and normalizing, and what works end to end against a live review.
 
   The manifest here avoids it. An output whose amount is "whatever is left after the other
   named outputs and the fee, returned to the caller's own wallet" is what `destination: "change"`
@@ -260,8 +260,8 @@ pointing it at `liquid.network`, which has gentler rate limits.
   than by the expression evaluator, so no `fee` keyword is needed. Both withdraw actions'
   `beneficiary_payout` is written this way. That is safe for this contract specifically:
   `recursive_covenant()` pins output 0 as the covenant and output 2 as the fee, and never
-  constrains output 1's identity or amount, so an auto-placed change output landing there
-  is fine. A contract that did pin output 1's value exactly would need the real `fee`
+  constrains output 1's identity or amount, so an automatically placed change output there
+  is acceptable. A contract that did pin output 1's value exactly would need the real `fee`
   keyword, so this is a fit to one contract's shape rather than a general substitute.
 - **The two implementations have already diverged.** This contract's manifest is `0.3.0`
   for `stringhandler/txmanifest-wallet` and `0.1.0` for Humid, and they disagree on at
@@ -273,7 +273,7 @@ pointing it at `liquid.network`, which has gentler rate limits.
   "1.0"` while every other fixture checked, root or current, is `"0.1.0"`. From outside it
   is not clear whether `classes`/`methods` is a retired name, a proposed replacement, or
   an intentionally parallel form, which anyone writing a new manifest has to guess at.
-- **One structural safeguard works in the format's favour.** Humid's `unblindable:
+- **One structural safeguard works in the format's favor.** Humid's `unblindable:
   "covenant"` rule means a manifest author who forgets to mark a covenant output
   non-confidential cannot cause a stuck-funds outcome in Humid, which is a real mitigation
   for exactly the risk the txmanifest documentation names when it says the format has no

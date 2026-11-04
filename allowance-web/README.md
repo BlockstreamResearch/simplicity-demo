@@ -10,9 +10,9 @@ Three documents, split by purpose:
 - `EXPLANATION.md` is the background: what the contract enforces and why the architecture
   looks like this. Not needed to finish the HOWTO.
 - `REFERENCE.md` is for lookup while you work: exact RPC shapes, manifest field
-  behaviour, an error-to-cause table, and other ways to drive the same contract.
+  behavior, an error-to-cause table, and other ways to drive the same contract.
 
-Everything the HOWTO needs is in this directory. A few files it cross-references live
+Everything the HOWTO needs is in this directory. A few files it cross-references are
 elsewhere; the last section lists them so that nothing here looks accidentally missing.
 
 ## What is here
@@ -37,10 +37,10 @@ the Humid extension as a manifest, which is what Step 11 does.
 `examples/allowance-humid-only/` does the wallet half alone, with no wasm and no build
 step, and `REFERENCE.md` says when that shape is worth copying. Each has its own README.
 
-## External things you will need
+## External dependencies
 
 Nothing in this directory needs building, but the HOWTO and `REFERENCE.md` point at four
-projects that live elsewhere:
+projects hosted elsewhere:
 
 - [Humid](https://github.com/BlockstreamResearch/humid), the browser-extension wallet,
   built and used in Step 11. Apply
@@ -61,8 +61,8 @@ A Liquid testnet faucet supplies coins (Step 4). Everything here is testnet only
   machine that built it, and Step 3 of the HOWTO says how to build it.
 - Wallet files holding plaintext mnemonics, and saved instance and state files. Both
   worked examples create their own.
-- `examples/last_will/`: a second manifest worth comparing against, which lives in the
+- `examples/last_will/`: a second manifest worth comparing against, which is in the
   `txmanifest-wallet` repository.
 
-`examples/allowance-humid/HUMID-BUGS.md` is a copy. The maintained version lives in the
+`examples/allowance-humid/HUMID-BUGS.md` is a copy. The maintained version is in the
 Humid checkout it describes, so check there before relying on its status lines.

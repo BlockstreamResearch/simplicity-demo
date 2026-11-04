@@ -58,7 +58,7 @@ is a good way to learn the Simplex API from it. Start with these four:
   hand rather than through the `partial_withdrawal`/`full_withdrawal` helpers.
 
 One short illustrative piece, the part every spend of this covenant shares (see the
-real file for the rest; this is not the whole test, just the shared skeleton both
+real file for the rest; this is not the whole test, only the shared skeleton both
 tests build on):
 
 ```rust
@@ -77,14 +77,14 @@ fn spend_skeleton(program: &AllowanceProgram, utxo: UTXO) -> FinalTransaction {
 }
 ```
 
-`set_sequence` is the manifest-free, hands-on-the-wheel equivalent of the manifest's
-`sequence.relative_blocks`: the same BIP68 mechanism, just set directly on the
+`set_sequence` is the manual, manifest-free equivalent of the manifest's
+`sequence.relative_blocks`: the same BIP68 mechanism, set directly on the
 transaction builder instead of resolved from a manifest field. `DUMMY_SIGNATURE` is
 a placeholder the signer overwrites with a real one over this transaction's actual
 `sig_all_hash`, so nothing about the contract's real signature check is being
 skipped.
 
-## Traps worth knowing before reading further
+## Pitfalls
 
 - **The fee comes out of the allowance's own balance, always.** `enforce_single_input`
   leaves no room for a separate fee-paying input. `Signer::broadcast` will add a
@@ -98,10 +98,9 @@ skipped.
   `generate_blocks` call, so a realistic value costs almost nothing, except in one
   test (`allowance_drains_over_successive_withdrawals`), which waits out the
   interval five times and takes on the order of 20 seconds.
-- **There's a real ceiling on how long an interval `mine_until_height` can jump in
-  one call**: it gives Esplora a flat five seconds to index whatever it just mined,
-  regardless of how many blocks that was. 1440 is comfortable; something like
-  25920 (what some real covenants use) is not; mine it in bounded batches instead
+- **`mine_until_height` limits how far one call can advance**: it waits a fixed five
+  seconds for Esplora to index the new blocks, however many there are. 1440 blocks
+  works; 25920 (an interval some real covenants use) does not; mine it in bounded batches instead
   of one call to the final target if you need a longer interval than this.
 
 ## More tests to write
