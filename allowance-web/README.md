@@ -47,7 +47,7 @@ projects hosted elsewhere:
   `examples/allowance-humid/humid-allowance-fixes.patch` to it; without that patch no
   withdrawal through the wallet works. Step 11 has the exact commands.
 - [Simplex](https://github.com/BlockstreamResearch/smplx) for Step 2's tests, installed
-  with `cargo install`; needs a Rust toolchain.
+  with its `simplexup` installer; the tests also need a Rust toolchain.
 - [LWK](https://github.com/Blockstream/lwk) for the page itself, built to wasm with
   `--features simplicity`. Step 3 has the commands.
 - [`txmanifest-wallet`](https://github.com/stringhandler/txmanifest-wallet), optional: a
