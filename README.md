@@ -13,11 +13,11 @@ https://docs.simplicity-lang.org/getting-started/quickstart
 
 The `allowance-web` directory is a set of worked examples for making Simplex integration tests and a web app to drive a SimplicityHL contract from a browser, including Humid wallet integration.
 
-These examples have a larger number of build-time dependencies, including those for building the Humid wallet itself. The dependencies are described in the HOWTO linked below.
+These examples have a larger number of build-time dependencies, including those for building the Humid wallet itself. The dependencies are described in the tutorial linked below.
 
-A HOWTO with a walkthrough to make use of these is available online at
+A tutorial with a walkthrough to make use of these is available online at
 
-https://docs.simplicity-lang.org/getting-started/allowance-howto
+https://docs.simplicity-lang.org/getting-started/allowance-howto/HOWTO/
 
 
 
