@@ -331,8 +331,12 @@ async function invoke(method, params) {
   } catch (e) {
     if (!unauthorized(e)) throw e;
     log("no usable session, asking Humid to connect");
+    // Request every method this page uses: Humid authorizes a session for exactly the
+    // methods it was created with, so a narrower session would need a second prompt.
     const s = await ask("wallet_createSession", {
-      requiredScopes: { [SCOPE]: { methods: [method], notifications: [] } },
+      requiredScopes: { [SCOPE]: {
+        methods: ["getBalance", "getWalletDescriptor", "processConfidentialTransaction"],
+        notifications: [] } },
     });
     sessionId = (s && s.sessionId) || sessionId;
     return call();

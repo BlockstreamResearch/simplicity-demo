@@ -336,9 +336,9 @@ can play both parties; use two profiles to keep them separate.</p>
   a transaction confirms, less often during a long timelock. It pauses while the tab is
   hidden, backs off when Esplora is slow or refuses, and stops after an hour. Press Refresh
   status for an answer sooner.</p>
-  <p>Wallet syncs go to a Waterfalls server instead, which returns the wallet's whole
-  history in one request. The Waterfalls operator learns which addresses belong to the
-  wallet.</p>
+  <p>Wallet syncs use Esplora too. A sync checks each of the wallet's addresses in turn,
+  40 or more requests, so the page runs one sync at a time and doesn't start one while it's
+  backing off.</p>
 
   <h3>Keys and custody</h3>
   <p>Both the wallet mnemonic and the beneficiary's secret key are stored in this browser's
@@ -376,11 +376,6 @@ can play both parties; use two profiles to keep them separate.</p>
 // sends CORS headers, so liquid.network cannot be fetched from a browser page even
 // though it is the better choice for server-side use.
 const ESPLORA = "https://blockstream.info/liquidtestnet/api";
-// Wallet scans go to a Waterfalls server instead: it returns the whole descriptor's
-// history in one request, where a plain Esplora scan costs one request per address
-// (40 or more per sync). blockstream.info doesn't serve Waterfalls. Only the scan goes
-// here; covenant lookups and broadcasts still use ESPLORA.
-const WATERFALLS = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api";
 const EXPLORER_TX = "https://blockstream.info/liquidtestnet/tx/";
 const EXPLORER_ADDR = "https://blockstream.info/liquidtestnet/address/";
 const FAUCET = "https://liquidtestnet.com/api/faucet";
@@ -503,6 +498,44 @@ async function esplora(path, opts) {
   return body;
 }
 
+// Wallet scans. LWK's fullScan asks Esplora about each of the wallet's addresses in
+// turn, 40 or more requests per scan, to the same host as the covenant lookups. Those
+// requests don't go through esplora() above, so this applies the same throttle rules
+// to them: no scan during a stand-down, one scan at a time (a second caller waits for
+// the scan already running rather than starting another), and a refusal during a scan
+// starts a stand-down, which also holds off the status polling.
+let scanInFlight = null;
+
+function scanWallet() {
+  if (scanInFlight) return scanInFlight;
+  const waitMs = throttledUntil - Date.now();
+  if (waitMs > 0) {
+    return Promise.reject(new Error(
+      "Esplora is throttling requests, so the page won't scan the wallet for about " +
+      Math.ceil(waitMs / 60000) + " more min. Try again after that."));
+  }
+  const w = wollet;
+  scanInFlight = (async () => {
+    const started = Date.now();
+    try {
+      const update = await client.fullScan(w);
+      // A wallet opened during the scan replaced this one: don't apply its result.
+      if (w !== wollet) throw new Error("The wallet changed during the scan. Sync again.");
+      if (update) w.applyUpdate(update);
+      walletBalanceSats = policyBalanceOf(w);
+      log("wallet scan took " + Math.round((Date.now() - started) / 1000) + "s");
+    } catch (e) {
+      if (/too many requests|\b(?:HTTP|status)\D{0,15}429\b/i.test(errText(e))) {
+        noteThrottle("HTTP 429 during a wallet scan");
+      }
+      throw e;
+    } finally {
+      scanInFlight = null;
+    }
+  })();
+  return scanInFlight;
+}
+
 // ---------------------------------------------------------------------------
 // Module state
 // ---------------------------------------------------------------------------
@@ -512,8 +545,7 @@ let network = null;    // Network
 let policyAsset = null;// AssetId
 let signer = null;     // Signer
 let wollet = null;     // Wollet
-let client = null;     // EsploraClient for broadcasting
-let scanClient = null; // EsploraClient in Waterfalls mode, for wallet scans
+let client = null;     // EsploraClient, for wallet scans and broadcasting
 let benKeypair = null; // Keypair  (the beneficiary's BIP340 key)
 let contract = null;   // { source, program, address, params }
 
@@ -545,7 +577,6 @@ async function loadLibrary() {
     network = L.Network.testnet();
     policyAsset = network.policyAsset();
     client = new L.EsploraClient(network, ESPLORA, false, 1, false);
-    scanClient = new L.EsploraClient(network, WATERFALLS, true, 1, false);
     show("out-load",
       "Loaded.\nnetwork: " + network.toString() +
       "\npolicy asset: " + policyAsset.toString() +
@@ -635,14 +666,13 @@ $("btn-wallet").onclick = async () => {
 };
 
 $("btn-sync").onclick = async () => {
-  show("out-wallet", "Scanning the chain…");
+  show("out-wallet", "Scanning the chain. This checks each wallet address in turn and " +
+    "can take some time…");
   try {
     needLib();
     if (!wollet) throw new Error("Open the wallet first.");
-    const update = await scanClient.fullScan(wollet);
-    if (update) wollet.applyUpdate(update);
+    await scanWallet();
     const addr = wollet.address().address();
-    walletBalanceSats = policyBalanceOf(wollet);
     show("out-wallet",
       "receive address: " + addr.toString() +
       "\nbalance: " + (walletBalanceSats === null
@@ -651,9 +681,7 @@ $("btn-sync").onclick = async () => {
       "\ntip height: " + wollet.tip().height(), "");
     log("synced, balance", String(walletBalanceSats));
   } catch (e) {
-    show("out-wallet", "Sync failed: " + errText(e) +
-      "\n\nWallet syncs use the Waterfalls server at " + WATERFALLS +
-      ", not blockstream.info.", "err");
+    show("out-wallet", "Sync failed: " + errText(e), "err");
     log("sync failed:", errText(e));
   }
 };
@@ -686,12 +714,11 @@ $("btn-faucet").onclick = async () => {
       "https://liquidtestnet.com/faucet by hand.",
       "");
 
-    // One check, timed for about one block.
+    // One check, timed for about one block, deliberately not a poll, since a wallet
+    // scan costs 40 or more Esplora requests.
     setTimeout(async () => {
       try {
-        const upd = await scanClient.fullScan(wollet);
-        if (upd) wollet.applyUpdate(upd);
-        walletBalanceSats = policyBalanceOf(wollet);
+        await scanWallet();
         const arrived = walletBalanceSats !== null &&
                         (before === null ? walletBalanceSats > 0n : walletBalanceSats > before);
         show("out-wallet", arrived
@@ -702,8 +729,7 @@ $("btn-faucet").onclick = async () => {
         log("post-faucet balance:", String(walletBalanceSats));
         updateUi();
       } catch (e) {
-        show("out-wallet", "Could not check the balance through the Waterfalls server: " +
-          errText(e), "warn");
+        show("out-wallet", "Could not check the balance: " + errText(e), "warn");
       }
     }, 60000);
   } catch (e) {
@@ -1763,8 +1789,14 @@ async function invokeHumid(method, params) {
   } catch (e) {
     if (!looksUnauthorized(e)) throw e;
     log("no usable Humid session, asking it to connect");
+    // Request every method the page uses, not only this one: Humid authorizes a session
+    // for exactly the methods it was created with, so a session made for the key alone
+    // would refuse the first Fund and force a second connect prompt. Fund and Claim
+    // still show Humid's own confirmation on every call.
     const session = await humidRequest("wallet_createSession", {
-      requiredScopes: { [LIQUID_TESTNET_SCOPE]: { methods: [method], notifications: [] } },
+      requiredScopes: { [LIQUID_TESTNET_SCOPE]: {
+        methods: ["getWalletDescriptor", "processConfidentialTransaction"],
+        notifications: [] } },
     });
     humidSessionId = (session && session.sessionId) || humidSessionId;
     return invoke();

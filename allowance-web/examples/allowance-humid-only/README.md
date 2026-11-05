@@ -78,7 +78,8 @@ that, from the manifest.
 `../allowance-humid/dapp-demo.html` does, destroys a working 30-day authorization and
 re-approves it every time. Every connect prompt in that older demo comes from this pattern.
 This page tries `wallet_invokeMethod` first and only creates a session if the call is
-actually refused.
+actually refused. When it does create one, it names every method it uses, because a session
+covers only the methods it was created with.
 
 **`instance` is double-nested, `state` is not.** `instance: {instance: {fields: {...}}}`,
 because `normaliseInstance()` reads `raw.instance.fields`. Getting it wrong fails silently
