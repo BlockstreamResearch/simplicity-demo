@@ -489,7 +489,7 @@ async function esplora(path, opts) {
   if (res.status === 429) {
     noteThrottle("HTTP 429");
     throw new Error(
-      "Esplora is rate-limiting this page (HTTP 429). It refuses everything for a few minutes " +
+      "Esplora is rate-limiting this page (HTTP 429). It can refuse everything for an hour or more " +
       "after a burst, so wait rather than retrying; automatic refreshing has slowed down."
     );
   }
@@ -958,10 +958,13 @@ $("btn-terms-load").onclick = async () => {
     fillTermsBlob();
 
     const kp = loadBeneficiaryKey();
-    const mine = kp.xOnlyPublicKey.toString() === params.benkey;
+    // In Humid mode the beneficiary key is Humid's, not this page's.
+    const mine = usingHumid()
+      ? humidKey === params.benkey
+      : kp.xOnlyPublicKey.toString() === params.benkey;
     show("out-terms-in",
       "Loaded, and the address re-derived here" +
-      (claimed ? " (it matches the one in the blob)." : " (the blob named no address to check).") +
+      (claimed ? " (it matches the one in the terms)." : " (the terms didn't name an address to check).") +
       "\ncovenant address: " + derived +
       "\nterms: " + params.allowance + " sats every " + params.mindist + " blocks (~" +
       params.mindist + " min)", "");
@@ -1089,9 +1092,9 @@ $("btn-fund").onclick = async () => {
     // allowance smaller than the withdrawal fee can never be emptied, because
     // enforce_single_input() leaves nothing else to pay the fee with.
     if (amount <= 0n) throw new Error("Enter an amount above zero.");
-    if (amount < WITHDRAW_FEE_SATS) {
+    if (amount <= WITHDRAW_FEE_SATS) {
       throw new Error(
-        "That is less than the " + WITHDRAW_FEE_SATS + "-sat withdrawal fee, so the " +
+        "That isn't more than the " + WITHDRAW_FEE_SATS + "-sat withdrawal fee, so the " +
         "allowance could never be withdrawn: the fee has to come out of the covenant's " +
         "own balance."
       );
