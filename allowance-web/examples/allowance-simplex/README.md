@@ -28,6 +28,13 @@ in, build, test).
    layer rather than inside the contract, which is worth seeing distinctly from
    a contract-level rejection (below).
 
+## Running the tests again
+
+Step 2's `export` lines put `simplex` on your `PATH` only in the terminal where you ran
+them. To run these tests, or ones you write yourself, in a later terminal, add
+`export PATH="$HOME/.simplex/bin:$PATH"` to your shell's startup file, such as `~/.bashrc`
+or `~/.zshrc`, then run `simplex test` from the `allowance_example` directory.
+
 ## Watching a test run
 
 To see what the contract does during a test, run `simplex test -vv` from the project
@@ -128,4 +135,5 @@ These go further than the four above:
 ## What this directory leaves out
 
 There is no `Cargo.toml` or other project scaffolding here. Step 2 of the HOWTO gets
-them from `simplex init`, which declares the published `smplx-std` crate.
+them from `simplex init`, which declares the published `smplx-std` crate, and Step 2 then
+pins that crate to 0.2.0, the release these tests are written for.
