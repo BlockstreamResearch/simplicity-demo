@@ -1,7 +1,7 @@
 # How the allowance covenant works, and why it is built this way
 
-Background reading. **To run it yourself, start with [Build a complete Simplicity application, from contract to web to wallet](HOWTO.md)**: none of this
-is needed to complete the HOWTO. For exact shapes and field behavior rather than
+Background reading. **To run it yourself, start with [Build a complete Simplicity application, from contract to web to wallet](build-end-to-end-app.md)**: none of this
+is needed to complete the tutorial. For exact shapes and field behavior rather than
 reasoning, see [`REFERENCE.md`](REFERENCE.md).
 
 ## Simplicity covenants
@@ -215,7 +215,7 @@ known-good manifest for a different contract.
 
 ### Who signs, and what that changes
 
-The page used in the HOWTO supports both signers, and they are two ends of a range rather
+The page used in the tutorial supports both signers, and they are two ends of a range rather
 than rival technologies to pick between.
 
 **In the page**, through [LWK](https://docs.simplicity-lang.org/glossary/#lwk) compiled to wasm: the page loads the
@@ -368,6 +368,6 @@ the script level; the transaction shapes; and the core indexer logic.
 
 ## Next steps
 
-The steps that put this on chain are in [Build a complete Simplicity application, from contract to web to wallet](HOWTO.md). If you are adapting the contract
+The steps that put this on chain are in [Build a complete Simplicity application, from contract to web to wallet](build-end-to-end-app.md). If you are adapting the contract
 or writing a manifest for a different one, the sections above on what the contract
 enforces and on writing a manifest are the two to reread first.

@@ -66,7 +66,10 @@ cd simplicity-demo/allowance-web
 ```
 
 You should now be in `allowance-web`, which holds the contract, the manifests, the worked
-examples and the wallet patch.
+examples and the wallet patch. It also holds [`EXPLANATION.md`](EXPLANATION.md), on how the
+application works and why it's built this way, and [`REFERENCE.md`](REFERENCE.md), with
+error messages, the Humid wallet API and setup details. This tutorial links to sections of
+both.
 
 Run every command in the rest of this tutorial from `allowance-web`. If you open another
 terminal, `cd` to `allowance-web` in it first. This tutorial wraps each command that needs

@@ -1,7 +1,7 @@
 # Allowance: Simplex integration tests (drop-in files)
 
 Two files meant to be copied into a fresh `simplex init` project, not a
-self-contained project of their own; see Step 2 of [the HOWTO](../../HOWTO.md) for
+self-contained project of their own; see Step 2 of [the tutorial](../../build-end-to-end-app.md) for
 the walkthrough (install Simplex, scaffold a project, copy these two files
 in, build, test).
 
@@ -134,6 +134,6 @@ These go further than the four above:
 
 ## What this directory leaves out
 
-There is no `Cargo.toml` or other project scaffolding here. Step 2 of the HOWTO gets
+There is no `Cargo.toml` or other project scaffolding here. Step 2 of the tutorial gets
 them from `simplex init`, which declares the published `smplx-std` crate, and Step 2 then
 pins that crate to 0.2.0, the release these tests are written for.

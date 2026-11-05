@@ -17,7 +17,7 @@ These examples have a larger number of build-time dependencies, including those 
 
 A tutorial with a walkthrough to make use of these is available online at
 
-https://docs.simplicity-lang.org/getting-started/allowance-howto/HOWTO/
+https://docs.simplicity-lang.org/getting-started/build-end-to-end-app/
 
 
 
