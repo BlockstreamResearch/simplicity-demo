@@ -200,12 +200,13 @@ can play both parties; use two profiles to keep them separate.</p>
 <section>
   <h2>Fund it</h2>
   <p class="note">Pays an <strong>explicit</strong> (unblinded) output to the covenant address.
-  The contract reads its own amount, so a confidential output here can never be spent. Leave
-  broadcast unchecked the first time to see what would be built.</p>
+  The contract reads its own amount, so a confidential output here can never be spent. The
+  page shows what it will send before broadcasting; clear &ldquo;Broadcast for real&rdquo; to
+  see what would be built without sending anything.</p>
   <label for="fundamt">Amount to lock (sats)</label>
   <input type="number" id="fundamt" value="8000" min="1">
   <span class="hint-inline" id="hint-fundamt"></span>
-  <label><input type="checkbox" id="fund-broadcast"> Broadcast for real</label>
+  <label><input type="checkbox" id="fund-broadcast" checked> Broadcast for real</label>
   <button id="btn-fund">Fund</button>
   <div class="out" id="out-fund"></div>
 </section>
@@ -359,8 +360,8 @@ can play both parties; use two profiles to keep them separate.</p>
 <div id="confirm-modal" hidden>
   <div id="confirm-panel" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
     <h2 id="confirm-title">Confirm this withdrawal</h2>
-    <p class="note">Check the numbers before signing. This spends a real testnet UTXO and
-    cannot be undone.</p>
+    <p class="note">Check the numbers before signing. Once broadcast, this transaction can't
+    be undone.</p>
     <div id="confirm-body" class="mono"></div>
     <button id="confirm-ok">Sign &amp; broadcast</button>
     <button id="confirm-cancel" class="secondary">Cancel</button>
@@ -1171,6 +1172,24 @@ $("btn-fund").onclick = async () => {
       return;
     }
 
+    // Broadcasting is the default, so show what will be sent before sending it. Humid
+    // mode doesn't need this: Humid shows its own confirmation.
+    show("out-fund", "Waiting for you to confirm…");
+    const ok = await askConfirm(
+      "action:    Fund\n" +
+      "lock:      " + amount + " sats\n" +
+      "to:        " + c.address.toString() + "\n" +
+      "terms:     " + c.params.allowance + " sats every " + c.params.mindist + " blocks\n" +
+      "fee:       " + tx.fee(policyAsset) + " sats\n" +
+      "outputs:   " + tx.outputs.length + "\n\n" +
+      "Only the beneficiary can withdraw these coins. You can't take them back.",
+      "Confirm this funding");
+    if (!ok) {
+      show("out-fund", "Canceled. Nothing was sent.", "");
+      log("fund canceled by user");
+      return;
+    }
+
     const txid = await client.broadcast(finalPset);
     show("out-fund", "Broadcast: " + txid.toString() +
       "\n" + EXPLORER_TX + txid.toString() +
@@ -1439,8 +1458,10 @@ document.addEventListener("keydown", (ev) => {
   if (ev.key === "Escape" && pendingConfirm) settleConfirm(false);
 });
 
-function askConfirm(summary) {
+function askConfirm(summary, title = "Confirm this withdrawal", okLabel = "Sign & broadcast") {
   if (pendingConfirm) return Promise.resolve(false);   // one dialog at a time
+  $("confirm-title").textContent = title;
+  $("confirm-ok").textContent = okLabel;
   $("confirm-body").textContent = summary;
   $("confirm-modal").hidden = false;
   $("confirm-ok").focus();

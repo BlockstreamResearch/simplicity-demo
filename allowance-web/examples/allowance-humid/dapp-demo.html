@@ -139,7 +139,7 @@
       <code>PartialWithdraw</code>s first. Liquid blocks are signed once per
       minute, so the time estimate is reliable.
     </p>
-    <label class="row" style="font-weight:500"><input id="fund-broadcast" type="checkbox" style="width:auto"> broadcast (leave unchecked for a dry-run first)</label>
+    <label class="row" style="font-weight:500"><input id="fund-broadcast" type="checkbox" style="width:auto" checked> broadcast (clear for a dry run)</label>
     <button onclick="doFund()">Fund</button>
     <div id="fund-result"></div>
     <pre class="out" id="fund-out" hidden></pre>
@@ -186,7 +186,7 @@
           </select>
         </div>
       </div>
-      <label class="row" style="font-weight:500"><input id="wd-broadcast" type="checkbox" style="width:auto"> broadcast</label>
+      <label class="row" style="font-weight:500"><input id="wd-broadcast" type="checkbox" style="width:auto" checked> broadcast</label>
       <button onclick="doWithdraw()">Call withdraw</button>
       <pre class="out" id="wd-out" hidden></pre>
     </section>

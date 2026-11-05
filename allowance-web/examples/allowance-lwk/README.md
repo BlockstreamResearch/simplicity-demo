@@ -94,7 +94,9 @@ point the import in `index.html` at wherever your package manager puts it.
    the only way to spend.
 5. **Fund**: `TxBuilder.addExplicitRecipient(...)`, deliberately *not*
    `addLbtcRecipient`. The contract reads its own asset and amount, so a confidential
-   output to this address is unspendable forever. Dry run first, broadcast second.
+   output to this address is unspendable forever. **Broadcast for real** starts selected, and
+   a real Fund shows a confirmation with the amount, address, terms and fee before it signs
+   and sends; clear the box for a dry run.
 6. **Live instances**, the indexer that neither library provides: `/address/{a}/utxo`
    plus `/blocks/tip/height`, classifying each UTXO independently by balance against
    `ALLOWANCE_AMOUNT` and depth against `MIN_DISTANCE`. Every UTXO at the address is its

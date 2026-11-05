@@ -226,14 +226,11 @@ A useful order for trying it:
    this page. Nothing past this can work until it does.
 2. Fund a wallet with testnet coins, through Humid's own receive address and the faucet at
    `https://liquidtestnet.com/api/faucet?address=<addr>&action=lbtc`.
-3. Call `Fund` with "broadcast" **unchecked** first. Humid's review layer returns a
-   description of the transaction it would build without spending anything, whatever the
-   numbers are. This is the cheapest check that the manifest and contract source are
-   accepted at all, before risking a real spend.
-4. Call `Fund` again with broadcast checked.
-5. Try `PartialWithdraw` the same dry-run-then-broadcast way, once `MIN_DISTANCE` blocks
-   have passed.
-6. For two real parties, use two browser profiles with their own Humid installs rather
+3. Call `Fund`. "broadcast" starts selected; clear it for a dry run, in which Humid's
+   review layer describes the transaction it would build without spending anything. That's
+   the cheapest check that the manifest and contract source are accepted at all.
+4. Try `PartialWithdraw` once `MIN_DISTANCE` blocks have passed.
+5. For two real parties, use two browser profiles with their own Humid installs rather
    than one wallet playing both roles. Keys should not be shared between parties even in a
    demo.
 

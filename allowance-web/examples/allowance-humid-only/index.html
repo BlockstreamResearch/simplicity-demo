@@ -154,13 +154,14 @@ action?&rdquo; confirmation: that is where you approve each transaction.
   balance, so <strong>fund Humid first</strong>: ask
   <a href="https://liquidtestnet.com/faucet" target="_blank" rel="noopener">liquidtestnet.com/faucet</a>
   for testnet coins and wait about a minute. Step 2 derives the receive address to give it,
-  and &ldquo;Check Humid's balance&rdquo; there confirms they arrived. Dry run first: it costs
-  nothing and confirms that the manifest and the contract match.</p>
+  and &ldquo;Check Humid's balance&rdquo; there confirms they arrived. To check that the
+  manifest and the contract match without spending anything, clear &ldquo;Broadcast for
+  real&rdquo; for a dry run.</p>
   <p class="note">Humid's receive address, from step 2:
   <code id="receive">not derived yet</code></p>
   <label for="amount">Amount to lock (sats)</label>
   <input type="number" id="amount" value="8000" min="1">
-  <label><input type="checkbox" id="broadcast"> Broadcast for real</label>
+  <label><input type="checkbox" id="broadcast" checked> Broadcast for real</label>
   <button id="fund">Fund</button>
   <div class="out" id="out-fund"></div>
 </section>
@@ -200,9 +201,9 @@ action?&rdquo; confirmation: that is where you approve each transaction.
   just created waits exactly as long as a freshly deposited one.</p>
   <p class="note">Refresh is manual on purpose: this is a shared public Esplora instance
   that strictly rate-limits requests after a burst.</p>
-  <label><input type="checkbox" id="wd-broadcast"> Broadcast for real</label>
-  <span class="hint-inline">Left unchecked, Humid builds and signs the withdrawal and sends
-  nothing, the same meaning as the box in step 4. It's worth doing once per allowance.</span>
+  <label><input type="checkbox" id="wd-broadcast" checked> Broadcast for real</label>
+  <span class="hint-inline">Cleared, Humid builds and signs the withdrawal and sends nothing,
+  the same meaning as the box in step 4.</span>
   <button id="refresh">Refresh status</button>
   <div class="out" id="out-status"></div>
   <div class="wrap"><table id="rows" hidden>
