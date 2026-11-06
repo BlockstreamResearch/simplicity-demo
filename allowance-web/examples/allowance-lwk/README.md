@@ -81,7 +81,7 @@ point the import in `index.html` at wherever your package manager puts it.
 1. **Load the library**: initializes the wasm and asserts the Simplicity classes are
    actually present, with the rebuild command in the error if they aren't. This is the
    check worth running first: a feature-off build fails here rather than with a less clear error later.
-2. **Wallet**: a single-key LWK wallet (`Signer` → `wpkhSlip77Descriptor` → `Wollet`),
+2. **Wallet**: a single-signature LWK wallet (`Signer` → `wpkhSlip77Descriptor` → `Wollet`),
    with an Esplora scan, balance, and a faucet button.
 3. **Beneficiary key**: `Keypair` from 32 random bytes, exposing `.xOnlyPublicKey` as
    `BENEFICIARY_KEY` and signing the witness with `.signSchnorr()`. The browser-extension

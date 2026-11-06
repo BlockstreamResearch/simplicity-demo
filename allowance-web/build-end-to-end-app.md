@@ -93,6 +93,8 @@ jq --version
 
 You should see a version from each, with `rustc` at 1.91 or newer. If not:
 
+- If `rustup` isn't found, install Rust from the link above. A distribution's `rustc`
+  package doesn't include `rustup`.
 - If `rustc` is older, run `rustup update stable`.
 - If `cc` isn't found, install your system's C build tools, such as `build-essential` on
   Debian or Ubuntu, or the Xcode Command Line Tools on macOS with `xcode-select --install`.
@@ -167,7 +169,7 @@ If you see `MISSING`, or `clang` isn't found, install LLVM and run the check aga
 Linux, install your distribution's `clang` and `llvm` packages.
 
 !!! warning "On macOS, use Homebrew's LLVM"
-    On macOS, install from `brew install llvm`, as the system `clang` doesn't support wasm.
+    On macOS, install LLVM with `brew install llvm`, because the system `clang` doesn't support wasm.
     Homebrew doesn't put this LLVM on your `PATH`, so run this in every terminal you use for
     the rest of the tutorial:
 
@@ -217,7 +219,7 @@ You should see `Simplicity API: present` under "Library". If the build lacks the
 feature, that section instead starts `Failed: This build is missing:`; redo the build in
 Step 3.
 
-The page has its own single-key wallet.
+The page has its own single-signature wallet, separate from the beneficiary key in Step 5.
 
 !!! warning "The page stores the mnemonic in plaintext"
     The page keeps its mnemonic in `localStorage` in plaintext. Use it only for testnet
@@ -400,7 +402,8 @@ After each claim, the page refreshes the list. The button of the instance you ju
 shows **Spent**. The new instance holding the remainder appears as **Unconfirmed**, then
 **Timelocked**, then **Claim** once its own timelock has passed.
 
-After the `FullWithdraw`, you should see `No live instances at …` in place of the list.
+Within about a minute of the `FullWithdraw`, you should see `No live instances at …` in place
+of the list.
 Once the `FullWithdraw` confirms, your payout address holds the locked amount, less the fee
 for each withdrawal.
 
@@ -568,7 +571,8 @@ the withdrawal to its own change address, so this mode doesn't have a payout fie
 5. Repeat from 1 with each new instance, until you've claimed the `FullWithdraw`.
 
 You should see `PartialWithdraw broadcast by Humid.` or `FullWithdraw broadcast by Humid.`
-with a txid for each withdrawal, and `No live instances at …` after the `FullWithdraw`.
+with a txid for each withdrawal, and `No live instances at …` within about a minute of the
+`FullWithdraw`.
 
 ## Reporting problems
 
