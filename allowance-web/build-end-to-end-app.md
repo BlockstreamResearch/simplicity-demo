@@ -91,11 +91,14 @@ cc --version
 jq --version
 ```
 
-You should see a version from each. `rustc` should be 1.91 or newer; if it's older, run
-`rustup update stable`. If `cc` isn't found, install your system's C build tools, such as
-`build-essential` on Debian or Ubuntu, or the Xcode Command Line Tools on macOS with
-`xcode-select --install`. If `jq` isn't found, install it with your system's package
-manager.
+You should see a version from each, with `rustc` at 1.91 or newer. If not:
+
+- If `rustc` is older, run `rustup update stable`.
+- If `cc` isn't found, install your system's C build tools, such as `build-essential` on
+  Debian or Ubuntu, or the Xcode Command Line Tools on macOS with `xcode-select --install`.
+- If `jq` isn't found, install it with your system's package manager.
+
+Then run the four checks again.
 
 Install [Simplex](https://docs.simplicity-lang.org/glossary/#simplex), which runs SimplicityHL integration tests
 against a local [Elements](https://docs.simplicity-lang.org/glossary/#elements) regtest
@@ -127,7 +130,7 @@ simplex init allowance_example
 (
   cd allowance_example
   rm tests/p2pk_test.rs simf/p2pk.simf      # init's own sample
-  cargo add anyhow@1 smplx-std@0.2.0        # the test needs these
+  cargo add anyhow@1 smplx-std@=0.2.0       # the test needs these
   cp ../examples/allowance-simplex/simf/allowance.simf ./simf/
   cp ../examples/allowance-simplex/tests/allowance_test.rs ./tests/
   simplex build && simplex test
@@ -163,7 +166,7 @@ clang -print-targets | grep -q wasm32 && echo present || echo MISSING
 If you see `MISSING`, or `clang` isn't found, install LLVM and run the check again. On
 Linux, install your distribution's `clang` and `llvm` packages.
 
-!!! warning "`clang` on macOS"
+!!! warning "On macOS, use Homebrew's LLVM"
     On macOS, install from `brew install llvm`, as the system `clang` doesn't support wasm.
     Homebrew doesn't put this LLVM on your `PATH`, so run this in every terminal you use for
     the rest of the tutorial:
@@ -207,7 +210,7 @@ You should see `Serving HTTP on … port 8099`. Leave it running through Step 11
 it with Ctrl-C. If it prints `Address already in use`, run it again with another port
 number and use that port below.
 
-Open <http://localhost:8099/>. The page doesn't work opened as a file. Keep the same port
+Open <http://localhost:8099/>. The page doesn't work if you open its HTML file directly. Keep the same port
 throughout, because the page stores its wallet and key per origin.
 
 You should see `Simplicity API: present` under "Library". If the build lacks the
@@ -240,7 +243,8 @@ You should see 64 hex characters.
 In a real allowance, the beneficiary does this on a separate machine and sends the 64
 characters to the benefactor. If you're testing on your own, the benefactor's
 **Beneficiary's public key** field already holds this key. If you change that field,
-**Use my own key (single-wallet test)** on the **I'm the benefactor** tab restores the key.
+press **Use my own key (single-wallet test)** on the **I'm the benefactor** tab to restore
+it.
 
 ## 6. Set the terms and compile the contract
 
@@ -275,7 +279,7 @@ any of the terms gives a different allowance at a different address.
 
 ## 7. Fund the allowance
 
-Set the amount to lock to a whole multiple of **Withdrawable per period**, such as `15000`
+Set the amount to lock to a whole multiple of **Withdrawable per period**, such as `10000`
 for an allowance of `5000`, so that the last withdrawal also takes a full allowance. Then
 press **Fund**.
 
@@ -288,7 +292,7 @@ press **Fund**.
     const tx = wollet.finalize(signer.sign(pset)).extractTx();
     ```
 
-**Broadcast for real** is selected, so the page first shows what it will send: the amount,
+**Broadcast for real** starts selected, so the page first shows what it will send: the amount,
 the covenant address, the terms, the fee and the [output](https://docs.simplicity-lang.org/glossary/#output) count.
 Check them and press **Sign & broadcast**. To try it without sending anything, clear
 **Broadcast for real** before you press **Fund**; the page then reports the txid it would have sent.
@@ -339,7 +343,8 @@ with its own timelock.
     ```
 
     You should see a JSON array with one entry per instance, each with a `value` and a
-    `status`, then the tip [height](https://docs.simplicity-lang.org/glossary/#height) as a bare number. A confirmed
+    `status`. The second command prints the tip [height](https://docs.simplicity-lang.org/glossary/#height) as a bare
+    number. A confirmed
     entry has `status.block_height`; an unconfirmed one has `status.confirmed: false` and
     isn't spendable yet.
 
@@ -363,7 +368,7 @@ You should see these outputs:
 | 1 | the payout to you | the fee |
 | 2 | the fee | |
 
-Confirm it.
+Press **Sign & broadcast**.
 
 You should see a broadcast txid. After a `PartialWithdraw`, a new instance holding the
 remainder appears within about a minute.
@@ -387,7 +392,7 @@ them"](REFERENCE.md#errors-and-what-causes-them).
 
 ## 10. Close the allowance
 
-Repeat Step 9 until the balance is at or below `ALLOWANCE_AMOUNT`. The action then shows
+Repeat Step 9, leaving the payout field as it is, until the instance's action shows
 `FullWithdraw`, which takes everything remaining and ends the covenant. Claim it the same
 way.
 
@@ -426,9 +431,11 @@ build each transaction. Humid then signs each one.
 
 Install Bun, which builds the extension, with
 [`npm`](https://docs.npmjs.com/cli/v12/configuring-npm/install). You need Bun 1.3.14 or
-newer:
+newer. If `npm --version` doesn't print a version, install Node.js, which provides `npm`,
+first.
 
 ```bash
+npm --version
 npm install -g bun
 bun --version
 ```
@@ -469,12 +476,16 @@ browser adds the extension only to pages loaded after it.
 
 Click the **Extensions** button (the puzzle-piece icon) in the top right of the browser
 and select **Humid** to create a wallet. Don't switch to another application during setup,
-because the setup window closes. If it does, open Humid again and start over. Humid then
-shows a new recovery phrase, so write down the new words and discard the old ones.
+because the setup window closes.
 
-Press **Create wallet**, write down on paper the 12 words the **Recovery phrase** panel
-shows, and press **I saved it**. Enter the three words it asks for, and press
-**Continue**. Then enter a password twice and press **Create wallet**.
+1. Press **Create wallet**.
+2. Write down on paper the 12 words the **Recovery phrase** panel shows, and press
+   **I saved it**.
+3. Enter the three words it asks for, and press **Continue**.
+4. Enter a password twice and press **Create wallet**.
+
+If the setup window closes partway through, open Humid and start over. It shows a new
+recovery phrase, so write down the new words and discard the old ones.
 
 You should see Humid's account panel, with a network menu reading **Liquid** at the top
 left, a balance, and **Receive** and **Send** buttons.
@@ -497,7 +508,7 @@ You should see the payment in Humid within about a minute, marked `Pending`.
 ### 11c. Fund and withdraw through Humid
 
 Select **Humid extension** under "Who signs". The page's own wallet and key sections
-disappear, along with the results from Steps 4 to 10. Then press **Check for Humid**.
+disappear, along with the results from Steps 5 to 10. Then press **Check for Humid**.
 
 You should see `Humid is available on this page.`
 
@@ -523,7 +534,7 @@ action?` confirmation, which describes the transaction. Its button reads **Sign 
 or **Sign** for a dry run.
 
 Repeat Step 6 to compile with this key. Humid spends only confirmed funds, so wait until the
-payment from 11b shows `Confirmed` in Humid. Then set the amount to lock as in Step 7, press
+payment from Step 11b shows `Confirmed` in Humid. Then set the amount to lock as in Step 7, press
 **Fund**, and approve it in Humid with **Sign and send**.
 
 ??? example "The call behind **Fund** in Humid mode"
@@ -537,8 +548,7 @@ payment from 11b shows `Confirmed` in Humid. Then set the amount to lock as in S
     });
     ```
 
-    Humid's response carries `txid`, `feeSats` and `transactionHex`, with `broadcast: true`
-    once Humid has sent the transaction. With **Broadcast for real** cleared, the page sends
+    With **Broadcast for real** cleared, the page sends
     `broadcast: false`, and Humid signs the transaction without sending it.
     [`REFERENCE.md`, "`processConfidentialTransaction`"](REFERENCE.md#processconfidentialtransaction)
     documents the call.
@@ -570,8 +580,8 @@ steps as a test, follow your own instructions instead.
 
 ## Next steps
 
-Read [`EXPLANATION.md`](EXPLANATION.md) next. It covers what the contract enforces, and
-who signs and what that changes. Before you adapt any of this for real funds, read
+Read [`EXPLANATION.md`](EXPLANATION.md) next. It covers what the contract enforces and how
+the choice of signer affects the application. Before you adapt any of this for real funds, read
 [`EXPLANATION.md`, "What a mainnet deployment
 would require"](EXPLANATION.md#what-a-mainnet-deployment-would-require).
 
@@ -585,7 +595,7 @@ To adapt a component for your own contract:
   need is in the two tests from Step 2.
 - **The manifest.** [`EXPLANATION.md`, "Writing a manifest for a different
   contract"](EXPLANATION.md#writing-a-manifest-for-a-different-contract) shows how to
-  derive a manifest from any contract's source, and
+  derive a manifest from a different contract's source, and
   [`EXPLANATION.md`, "Checking a manifest you didn't
   write"](EXPLANATION.md#checking-a-manifest-you-didnt-write) covers reviewing one,
   including one an AI assistant drafted.
