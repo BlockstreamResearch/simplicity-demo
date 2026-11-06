@@ -1193,8 +1193,8 @@ $("btn-fund").onclick = async () => {
     const txid = await client.broadcast(finalPset);
     show("out-fund", "Broadcast: " + txid.toString() +
       "\n" + EXPLORER_TX + txid.toString() +
-      "\n\nIt appears on the beneficiary tab as a new allowance instance once it " +
-      "confirms. The page checks for it automatically.", "");
+      "\n\nIt appears on the beneficiary tab as a new allowance instance within about a " +
+      "minute, marked unconfirmed. The page checks for it automatically.", "");
     log("funded, txid", txid.toString());
     awaitInstance(txid.toString());
     walletBalanceSats = null;          // stale now
@@ -1692,8 +1692,8 @@ async function doClaim(inst) {
       "\npaid to: " + payoutAddress.toString() +
       (inst.action === "PartialWithdraw"
         ? "\n\nThe remainder went back to the same covenant address as a new instance. " +
-          "It will appear above once the transaction confirms, with its timelock counting " +
-          "again from that block."
+          "It appears above within about a minute, marked unconfirmed. Its timelock counts " +
+          "from the block that confirms it."
         : "\n\nThat was the whole remaining balance, so this allowance is now closed."), "");
     log("claimed", key, "→", txid.toString());
   } catch (e) {
