@@ -43,7 +43,7 @@ directory. It traces every jet call with its real values.
 ## Tests to write yourself
 
 Each of these is a concrete next test, roughly in order of how much new ground it
-covers. Everything they need is already in `tests/allowance_test.rs`, so writing them
+covers. Most of what they need is already in `tests/allowance_test.rs`, so writing them
 is a good way to learn the Simplex API from it. Start with these four:
 
 - `partial_withdrawal_returns_the_remainder_to_the_covenant`: the simplest
