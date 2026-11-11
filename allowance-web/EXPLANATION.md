@@ -96,7 +96,7 @@ come out of the allowance's own balance, since no outside input can help pay the
 UTXOs sent to the same contract address are two separate instances that can never be
 merged, so paying the address a second time doesn't top up the first.
 
-The same rule limits the covenant to the network's policy asset: Liquid bitcoin (LBTC), or
+The same rule limits the covenant to the network's policy asset: [Liquid](https://docs.simplicity-lang.org/glossary/#liquid) bitcoin (LBTC), or
 test Liquid bitcoin (tLBTC) on testnet. The fee
 has to be paid in that asset, and with the covenant as the only input nothing else can
 supply it. Funded with any other asset, every partial withdrawal could carry only a
@@ -110,7 +110,7 @@ and it requires transaction version 2 or later.
 
 `MIN_DISTANCE` is a count of blocks. The contract checks that the spending transaction's
 `nSequence` field encodes at least that many, and the node enforces the encoded distance
-against the funding UTXO's own confirmation [height](https://docs.simplicity-lang.org/glossary/#height) under BIP68. [Liquid](https://docs.simplicity-lang.org/glossary/#liquid) blocks come from
+against the funding UTXO's own confirmation [height](https://docs.simplicity-lang.org/glossary/#height) under BIP68. Liquid blocks come from
 scheduled signers rather than proof-of-work search, so block time is about one minute with
 very low variance and "N blocks" translates reliably to "about N minutes".
 
@@ -220,11 +220,14 @@ than rival technologies to pick between.
 
 **In the page**, through [LWK](https://docs.simplicity-lang.org/glossary/#lwk) compiled to wasm: the page loads the
 library, compiles the contract, derives the address, builds the transaction and signs it
-with a key in `localStorage`. Steps 4 to 10 work this way.
+with a key in `localStorage`. Steps 4 to 10 work this way. Any script running on the page's
+origin can read that key, including libraries the page loads from elsewhere.
 
 **In a wallet**, through a manifest: the page passes [Humid](https://docs.simplicity-lang.org/glossary/#humid)
 `txmanifest.humid.json` and the contract source, and the extension compiles, builds, signs
-and broadcasts, showing the user its own confirmation. Step 11 works this way.
+and broadcasts, showing the user its own confirmation. Step 12 works this way. Humid keeps
+its keys inside the extension, behind a password, and the page's scripts can't read them
+even while the wallet is unlocked; the page can only send a request.
 
 The two produce different covenant addresses for the same stated terms, because Humid signs
 with its own BIP84 key and so supplies a different `BENEFICIARY_KEY`. A single allowance

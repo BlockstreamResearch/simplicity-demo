@@ -103,9 +103,7 @@ realistic two-party test.</p>
 </section>
 
 <div class="caution">
-Humid needs the patch at <code>../allowance-humid/humid-allowance-fixes.patch</code> applied
-and rebuilt; without it every withdrawal is refused as <code>unimplemented-construct</code>,
-and <code>FullWithdraw</code> fails separately as &ldquo;pays nothing&rdquo;. Every action shows Humid's own &ldquo;Perform a contract
+This page needs Humid 1.1.5 or newer. Every action shows Humid's own &ldquo;Perform a contract
 action?&rdquo; confirmation: that is where you approve each transaction.
 </div>
 
@@ -269,14 +267,16 @@ const NEXT_STEPS = [
    "extension is enabled at chrome://extensions, that this page is served over " +
    "http:// rather than opened as a file://, and that you are in the Chromium profile " +
    "Humid is installed in."],
-  [/unimplemented-construct|relative timelock/i,
-   "This is the un-patched relative-timelock bug. Apply " +
-   "../allowance-humid/humid-allowance-fixes.patch to your Humid checkout, rebuild with " +
-   "bun run build, and reload the extension at chrome://extensions."],
-  [/pays nothing/i,
-   "This is the un-patched FullWithdraw bug. The same patch " +
-   "(../allowance-humid/humid-allowance-fixes.patch) fixes it; rebuild and reload the " +
-   "extension."],
+  [/would inherit that wait/i,
+   "Humid sets aside a fee based on its current fee estimate, and that's more than this " +
+   "withdrawal can spare from the instance: the allowance amount for a partial withdrawal, " +
+   "or the whole balance for a full one. Humid would need a coin of its own to make up the " +
+   "difference, and the contract allows only one input. Testnet fee estimates sometimes spike, " +
+   "so wait a while and try again. Locking a whole multiple of the allowance keeps the last " +
+   "withdrawal at a full allowance, not a smaller remainder that's more exposed to this."],
+  [/time-lock the outputs funding it|pays nothing, so there is nothing to build/i,
+   "This Humid is older than 1.1.5, which can't build this contract's withdrawals. " +
+   "Install Humid 1.1.5 or newer, then reload this page."],
   [/is neither a parameter nor an argument/i,
    "Usually a request-shape problem rather than a manifest one: `instance` has to be " +
    "double-nested as {instance:{fields:{…}}} inside the instance field. This page does " +
@@ -916,8 +916,7 @@ async function claim(r) {
   if (claiming) { show("out-claim", "One withdrawal at a time: two spends of the same instance collide.", "warn"); return; }
   const dry = !$("wd-broadcast").checked;
   const extra = r.action === "FullWithdraw"
-    ? "\n\nThis closes the allowance. It needs the patched Humid; unpatched it is refused " +
-      "as \"pays nothing\"." : "";
+    ? "\n\nThis closes the allowance." : "";
   show("out-claim", "Waiting for you to confirm…");
   const ok = await askConfirm(
     `action:    ${r.action}\n` +

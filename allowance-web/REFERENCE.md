@@ -14,35 +14,34 @@ shaped the way it is, see [`EXPLANATION.md`](EXPLANATION.md).
 - [Chain access](#chain-access)
 - [Other clients for the same contract](#other-clients-for-the-same-contract)
 
-The Humid sections describe [Humid](https://docs.simplicity-lang.org/glossary/#humid) 1.1.4 (`a6d211d`), and their
-file paths are relative to a Humid checkout. Humid changes quickly, so check a newer release against its source.
+The Humid sections describe [Humid](https://docs.simplicity-lang.org/glossary/#humid) 1.1.5, and their file paths
+are relative to the root of Humid's source repository. Humid changes quickly, so check a newer release against its source.
 
 ## Errors and what causes them
 
 | Message | Cause | Fix |
 |---|---|---|
-| `asks for a relative timelock, and this wallet sets one sequence for the whole transaction — which would time-lock the outputs funding it as well`, with `reject: unimplemented-construct`, on any withdrawal | the relative-timelock bug in unpatched Humid | apply the patch from Step 11a, rebuild, reload the extension |
-| `would inherit that wait`, with `reject: unimplemented-construct`, on a withdrawal in Humid mode | the instance holds less than the amount Humid reserves for the fee, so Humid would add a coin from its own wallet, and that coin can't share the instance's timelock | Humid can claim this instance only when its fee rate falls low enough, which may not happen for a small balance; to avoid it, lock a whole multiple of the allowance, as in Step 7 |
+| `would inherit that wait`, with `reject: unimplemented-construct`, on a withdrawal in Humid mode | the [fee](https://docs.simplicity-lang.org/glossary/#fee) Humid sets aside, which it bases on its current fee estimate, is more than the withdrawal can spare from the instance: `ALLOWANCE_AMOUNT` on a `PartialWithdraw`, or the whole balance on a `FullWithdraw`. Humid would need a coin from its own wallet to make up the difference, and the [contract](https://docs.simplicity-lang.org/glossary/#contract) allows only one input. Testnet fee estimates sometimes spike | wait a while and claim again; lock a whole multiple of the allowance, as in Step 7, so the final `FullWithdraw` takes a full allowance rather than a smaller remainder that's more exposed to this |
 | `FullWithdraw failed: This instance holds less than the fee.` | the instance holds 500 sats or less, which the page's fixed 500-sat fee would use up | the page can't claim this instance; to avoid it, lock a whole multiple of the allowance, as in Step 7 |
-| `"FullWithdraw" pays nothing, so there is nothing to build.` | the change-only-output bug | same patch |
 | `unsupported platform: …` from `simplexup` | the Simplex installer supports only Linux and macOS | run the tutorial on Linux or macOS |
 | ``error: linker `cc` not found``, or `failed to find tool "cc"` from `secp256k1-sys` or `simplicity-sys` | there isn't a C compiler and linker installed, which Rust builds need and `rustup` doesn't provide | install your system's C build tools, such as `build-essential` on Debian or Ubuntu, or the Xcode Command Line Tools on macOS with `xcode-select --install`, then run the command again |
 | `cannot be built because it requires rustc 1.91.0 or newer` | Rust is older than `smplx-std`, the [Simplex](https://docs.simplicity-lang.org/glossary/#simplex) library the tests build against, needs | `rustup update stable`, then run `simplex build` again |
 | ``no `ProgramSignature` in `transaction` `` and ``the `?` operator cannot be applied to type `u64` `` from `simplex test` | the project's `smplx-std` isn't 0.2.0, the release `allowance_test.rs` is written for | in `allowance_example`, run `cargo add smplx-std@=0.2.0`, then test again |
 | `No available targets are compatible with triple "wasm32-unknown-unknown"` | the `clang` on your `PATH` has no WebAssembly backend | install LLVM from your package manager, or from Homebrew on macOS, and put its `clang` first on your `PATH` |
-| `fatal: destination path '…' already exists and is not an empty directory`, or a similar complaint from `simplex init`, `rm` or `git apply`, when you run a step's block again | the first run already created that directory, removed that file or applied that patch | harmless; check the result the step says you should see, which comes from the block's last command |
+| `fatal: destination path '…' already exists and is not an empty directory`, or a similar complaint from `simplex init` or `rm`, when you run a step's block again | the first run already created that directory or removed that file | harmless; check the result the step says you should see, which comes from the block's last command |
+| `replace humid/…? [y]es, [n]o, [A]ll, [N]one, [r]ename:` from `unzip` | you're unpacking Humid a second time, into the `humid` folder from the first run | answer `A` to replace every file |
 | `reject: shortfall`, with `This account holds 0 of the … needed` | Humid's funds are unconfirmed, or it is on mainnet | wait a minute for the funding to confirm; check that **Liquid Testnet** is selected in Humid's network menu |
 | `X is neither a parameter nor an argument of this action` | usually `instance` single-nested instead of double-nested | see the nesting rule below |
 | `[object Object]` instead of a message | the real text is in the thrown error's data | read `reject` and `reason` off it |
 | `No handler for method` | a chain method called directly | tunnel it through `wallet_invokeMethod` |
 | `non-BIP68-final` | not enough blocks have passed | wait; the [timelock](https://docs.simplicity-lang.org/glossary/#timelock) is working |
-| `Expecting value: line 1 column 1 (char 0)` from `python3 -m json.tool` | Esplora replied with an error message instead of JSON, usually because a placeholder such as `<fund-txid>` is still in the command, or because of a rate limit | run the `curl` command on its own, without `python3 -m json.tool`, to see Esplora's reply; replace the placeholder with the value the page showed, or after an HTTP 429, see "Chain access" |
+| `Expecting value: line 1 column 1 (char 0)` from `python3 -m json.tool` | [Esplora](https://docs.simplicity-lang.org/glossary/#esplora) replied with an error message instead of JSON, usually because a placeholder such as `<fund-txid>` is still in the command, or because of a rate limit | run the `curl` command on its own, without `python3 -m json.tool`, to see Esplora's reply; replace the placeholder with the value the page showed, or after an HTTP 429, see "Chain access" |
 | `Esplora is rate-limiting this page (HTTP 429)`, or `Esplora is throttling requests, so the page won't scan the wallet…` | `blockstream.info` is refusing requests from your address after a burst | stop pressing **Sync & show balance**, **Refresh status** and **Claim**, and wait; the refusal can last an hour or more, and requests sent during it may extend it |
 | `ALLOWANCE_AMOUNT is smaller than the fee.` on a claim | the allowance was compiled with an `ALLOWANCE_AMOUNT` of 500 sats or less, which the page's 500-sat fee would use up | the page can't claim from this allowance; compile a new one with a larger **Withdrawable per period**, as in Step 6 |
 | `insufficient fee, rejecting replacement` | a previous attempt already reached the mempool | check the explorer before retrying; it probably succeeded |
 | `window.humid is missing` | extension disabled, wrong profile, page opened as `file://`, or page already open when Humid was loaded, enabled or reloaded | enable it, serve over `http://`, and reload the page |
-| `Manifest file is missing or unreadable` from **Load unpacked** | the folder selected isn't `humid/dist`, or Step 11a's `bun run build` didn't finish | run Step 11a again until `bun run build` writes `humid/dist`, then select that folder |
-| `Import #0 "wbg": module is not an object or function` | a web-target wasm build overwrote the bundler-target `pkg/` | rebuild `pkg/` with `--target bundler` |
+| `Manifest file is missing or unreadable` from **Load unpacked** | the folder selected isn't the `humid` folder that Step 11 unpacked, which holds `manifest.json` | select `allowance-web/humid`; if it's missing or empty, run Step 11's download block again |
+| `expected instance of ControlBlock`, or of another LWK class, on a claim | `vendor/` holds an LWK build from a different commit than the one Step 3 checks out, and its functions take different arguments | in your LWK clone, check out the commit Step 3 names, rebuild, and copy the two files into `vendor/` again |
 | `null pointer passed to rust` | a wasm handle used after a call consumed it | build a fresh `TxOut` per call; reassign after every builder step |
 | `Expected a blinded address but got a non-blinded one` | `Address.parse` requires a [confidential](https://docs.simplicity-lang.org/glossary/#confidential) [address](https://docs.simplicity-lang.org/glossary/#address) | use `new Address(s)` and check the network with `isMainnet()` |
 
@@ -100,18 +99,6 @@ read-only methods the page requested, such as `getWalletDescriptor`, and selects
 default. `processConfidentialTransaction` can't be pre-approved, so it never appears there
 (`methodPolicyPresentation.ts`): every call shows Humid's own "Perform a contract action?"
 confirmation, which is where you review and approve the [transaction](https://docs.simplicity-lang.org/glossary/#transaction).
-
-### Building Humid
-
-If `git apply` reports `patch does not apply` when you run Step 11a's block again, the
-patch is probably applied already. Check from inside `humid`:
-
-```bash
-git apply --reverse --check ../examples/allowance-humid/humid-allowance-fixes.patch
-```
-
-If that prints nothing, the patch is in place, and you can ignore the error. The patch
-header describes both fixes well enough to redo by hand.
 
 ## `processConfidentialTransaction`
 
@@ -203,7 +190,7 @@ don't: `confirmation/provenance.ts` tags every displayed value as `verified`, `c
 
 `examples/allowance-humid-only/txmanifest.json` is `manifest_version 0.1.0`, for the
 wallet. `examples/allowance/txmanifest.json` is `0.3.0`, for the CLI engine below. They
-describe the same [contract](https://docs.simplicity-lang.org/glossary/#contract).
+describe the same contract.
 
 `examples/allowance/txmanifest.schema.json` is the machine-checkable form of the `0.3.0`
 dialect only. Validating the `0.1.0` manifest against it reports exactly one error, on
@@ -263,7 +250,7 @@ which serves the same API.
 that address for a long time, so pace automatic refreshing against how long there is left
 to wait, and stop when nothing is pending.
 
-The page syncs its wallet through the same [Esplora](https://docs.simplicity-lang.org/glossary/#esplora), with a
+The page syncs its wallet through the same Esplora, with a
 client created as `new EsploraClient(network, url, false, 1, false)`. A sync sends one
 request per wallet address, 40 or more, one after another, so the page runs one sync at a
 time and doesn't start one while it's backing off after a 429. Covenant lookups, the tip
@@ -309,7 +296,7 @@ tx-manifest-wallet run <manifest> <Action> --wallet w.json --params p.json
 ```
 
 That exercises the real compile and witness path without spending anything, and it is the
-only path here that runs without a browser. It still prompts for a [fee](https://docs.simplicity-lang.org/glossary/#fee) rate, so it needs a
+only path here that runs without a browser. It still prompts for a fee rate, so it needs a
 terminal. Use 0.3.0 or a later 0.3.x release: this engine checks `manifest_version` at
 parse time against its own `FORMAT_VERSION`, citing ELIP-205, unlike Humid, and a 0.2.x
 release rejects the `0.3.0` manifest. Its README says not to use it with real funds.

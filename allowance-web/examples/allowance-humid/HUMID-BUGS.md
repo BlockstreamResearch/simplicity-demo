@@ -1,6 +1,6 @@
 <!-- Snapshot. The working copy of this file lives in the Humid checkout it was
 written against, where it is maintained as the upstream-facing summary; this copy
-travels with the patch it documents. Check the Humid repository's issues for current
+travels with the demo it was written for. Check the Humid repository's issues for current
 status before relying on anything here. -->
 
 # Bugs found while building an allowance-covenant demo against Humid's txmanifest support
@@ -12,9 +12,8 @@ RPC → `processConfidentialTransaction`), not hand-built transactions. The demo
 manifest and contract are alongside this file. This file is the upstream-facing summary:
 one entry per distinct Humid defect, file/line, current status.
 
-Tally as of 2026-11-03: **9 distinct bugs found, 2 fixed upstream (not yet released),
-7 still open.** Until a release includes them, both fixes ship as one patch, `humid-allowance-fixes.patch` in
-this directory, against base commit `7dc8535`. Three additional items are missing feature/UX gaps rather
+Tally as of 2026-11-03: **9 distinct bugs found, 2 fixed upstream, 7 still open.** The two
+fixes were released in Humid 1.1.5 on 2026-11-09. Three additional items are missing feature/UX gaps rather
 than bugs, listed separately at the end.
 
 ---
@@ -46,7 +45,7 @@ lockout message after `MAX_UNLOCK_ATTEMPTS = 5` within `UNLOCK_COOLDOWN_MS = 30_
 reads `response.error.message` (falling back to `String(...)` only if `.message` is
 absent), matching `toError()`.
 
-**Status:** open, not patched locally or upstream.
+**Status:** open, not fixed locally or upstream.
 
 ---
 
@@ -87,7 +86,7 @@ trigger 2 entirely.
 `autoComplete="new-password"` on the two password fields (addresses trigger 1 only;
 trigger 2 is a platform-level constraint that only a non-popup surface removes).
 
-**Status:** open, not patched. Given a broken first-run flow blocks all downstream
+**Status:** open, not fixed. Given a broken first-run flow blocks all downstream
 testing, this is high severity despite being "just" a UX bug.
 
 ---
@@ -186,15 +185,13 @@ to it.
 **Fix applied:** a parallel session added `relativeTimelockPlacement()` to
 `inputRules.ts` and wired it into `review/index.ts`, checking actual input placement
 before refusing rather than refusing unconditionally on any declared sequence. Full
-writeup: `RELATIVE-TIMELOCKS.md` in this repo. Verified end-to-end against this demo
-after a rebuild + extension reload: `PartialWithdraw` completed and broadcast for
+writeup: `RELATIVE-TIMELOCKS.md` in this repo. Verified end-to-end against this demo: `PartialWithdraw` completed and broadcast for
 real, confirmed on the Liquid testnet explorer
 (`59346abd2ae1820aae87bd5262d4d7e67ba5efca62694a6b2832e9f33d11f3f8`, height 2640562,
 input sequence `10` — exactly `MIN_DISTANCE`, confirming a real BIP68 timelock was
 set, not merely not-refused).
 
-**Status:** fixed upstream by PR #48 (merged 2026-11-03 as `1875413`), after 1.1.4.
-Not yet in a release, so the 1.1.4 tag still needs the patch.
+**Status:** fixed upstream by PR #48 (merged 2026-11-03 as `1875413`), released in 1.1.5.
 
 ---
 
@@ -270,17 +267,14 @@ the review and `addChange()` adding an output for the same value, which is a wor
 than the one being fixed. Fixing *when* the refusal fires leaves the correct payment
 mechanism untouched.
 
-**Verified end to end** against a patched build on 2026-10-07: `FullWithdraw` built,
+**Verified end to end** against a build with the fix on 2026-10-07: `FullWithdraw` built,
 signed and broadcast, closing out an allowance instance —
 `27f08dcac9faf0bf01a5a30f6a8ba809d9c26d333cb699d94ad76390b5402c53` on Liquid testnet. A
 `PartialWithdraw` on a separate instance in the same session
 (`e1bee73eb719e66edd4e7afecd525826790fddeeef90cf1e73624685dc294126`) confirms the change
 did not disturb the path that already worked.
 
-**Status:** fixed upstream by PR #49 (merged 2026-11-03 as `aea9b4c`), after 1.1.4. Not
-yet in a release. Until one ships, the second half of
-`examples/allowance-humid/humid-allowance-fixes.patch` in the demo repo applies the same
-fix to the 1.1.4 tag, which still has both bugs.
+**Status:** fixed upstream by PR #49 (merged 2026-11-03 as `aea9b4c`), released in 1.1.5.
 Same category as #5 — an overly strict precondition that doesn't account for something
 correct happening later in the same area of code — and as with #5 there was no
 manifest-side workaround, since the defect is in the refusal rather than in anything
@@ -364,7 +358,7 @@ size covenant inputs from their witness.
 Before coin selection, Humid reserves `Math.ceil(feeRateSatsPerKvb)` sats for the fee:
 the fee for 1,000 vB. If a covenant input holds less than the reserve, coin selection
 adds a wallet coin to make up the difference. For a timelocked covenant input, the
-patched check from #5 then correctly refuses, because the wallet coin would inherit the
+fixed check from #5 then correctly refuses, because the wallet coin would inherit the
 timelock. The user sees:
 
 ```

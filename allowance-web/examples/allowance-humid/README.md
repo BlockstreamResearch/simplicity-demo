@@ -1,45 +1,20 @@
 # Allowance manifest in Humid's dialect, with an earlier demo page
 
 This directory holds the allowance contract's manifest written for the Humid browser
-extension, the patch Humid needs before it can run the contract, and an early demo page
-that drives the extension directly.
+extension and an early demo page that drives the extension directly. The contract needs
+Humid 1.1.5 or newer.
 
 ```
 txmanifest.json              the manifest, in Humid's 0.1.0 dialect
 allowance.simf               the contract: a copy of ../../contracts/allowance.simf
-humid-allowance-fixes.patch  two fixes Humid needs to run this contract at all
 dapp-demo.html               an earlier demo page, superseded by ../allowance-humid-only/
 HUMID-BUGS.md                the bugs and capability gaps found against Humid
 ```
 
 For a worked example to read or copy, use `../allowance-humid-only/` instead: it covers
 the same lifecycle and handles sessions correctly.
-What this directory is still the best source for is the manifest dialect, the patch, and
-the request shapes documented below.
-
-## Apply the patch first
-
-`humid-allowance-fixes.patch` fixes two bugs, both filed upstream and unfixed as of
-2026-10-07. Without it nothing here works past `Fund`:
-
-- Humid refuses BIP68 relative timelocks categorically, so every `PartialWithdraw` and
-  `FullWithdraw` fails with `{"reject": "unimplemented-construct"}`. The refusal is
-  correct in general, because one shared `nSequence` would wrongly time-lock a separate
-  fee-paying input against its own age, but it fires without checking how many inputs the
-  transaction has. This contract permits exactly one, via `enforce_single_input()`.
-- `FullWithdraw` is refused as "pays nothing, so there is nothing to build", because its
-  only output is policy-asset change.
-
-Apply it from the root of a Humid checkout and rebuild:
-
-```
-git apply /path/to/humid-allowance-fixes.patch
-bun run build        # then reload the extension at chrome://extensions
-```
-
-The patch header records the base commits it was generated against, describes both fixes
-well enough to redo by hand against a newer Humid, and covers what to do if `git apply`
-rejects it. Step 11 of the tutorial covers the same ground in sequence.
+What this directory is still the best source for is the manifest dialect and the request
+shapes documented below.
 
 ## How this manifest differs from `examples/allowance/txmanifest.json`
 
@@ -84,10 +59,11 @@ runs the same reader the extension uses (`inspectManifestDocument` from
 `@humid/tx-manifest`), entirely client-side, with no wallet or network call. It is the
 cheapest way to check that a manifest and contract source are accepted at all.
 
-From `allowance-web`, with Humid cloned there as in Step 11 of the tutorial:
+From the root of a clone of the [Humid repository](https://github.com/BlockstreamResearch/humid),
+set up as its own README describes:
 
 ```
-(cd humid && bun run web:dev)
+bun run web:dev
 ```
 
 1. Open the dev server in a browser and click through from the home screen to "Manifest

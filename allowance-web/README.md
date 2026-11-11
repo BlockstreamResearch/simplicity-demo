@@ -1,7 +1,7 @@
 # Allowance covenant: the tutorial and its files
 
 Start with the tutorial, [Build a complete Simplicity application, from contract to web to wallet](build-end-to-end-app.md),
-which is also published at <https://docs.simplicity-lang.org/getting-started/build-end-to-end-app/>: eleven steps that
+which is also published at <https://docs.simplicity-lang.org/getting-started/build-end-to-end-app/>: twelve steps that
 lock testnet LBTC in a Simplicity covenant, draw it down, close it out, and then run the
 same contract through a browser-extension wallet.
 
@@ -27,14 +27,14 @@ examples/
   allowance-simplex/                   regtest integration tests (Step 2)
   allowance/                           the manifest, its schema, and one set of call values
   allowance-lwk/                       the page the tutorial uses
-  allowance-humid/                     the wallet patch and manifest dialect notes
+  allowance-humid/                     manifest dialect notes and Humid bug reports
   allowance-humid-only/                a wasm-free variant, for reference
 docs-notes/mainnet-notes.md           the long form of the mainnet notes
 ```
 
 `examples/allowance-lwk/` is the page the tutorial uses. It compiles the contract and builds
 transactions itself through LWK compiled to wasm, and it can also hand the same contract to
-the Humid extension as a manifest, which is what Step 11 does.
+the Humid extension as a manifest, which is what Step 12 does.
 `examples/allowance-humid-only/` does the wallet half alone, with no wasm and no build
 step, and `REFERENCE.md` says when that shape is worth copying. Each has its own README.
 
@@ -43,10 +43,8 @@ step, and `REFERENCE.md` says when that shape is worth copying. Each has its own
 Nothing in this directory needs building, but the tutorial and `REFERENCE.md` point at four
 projects hosted elsewhere:
 
-- [Humid](https://github.com/BlockstreamResearch/humid), the browser-extension wallet,
-  built and used in Step 11. Apply
-  `examples/allowance-humid/humid-allowance-fixes.patch` to it; without that patch no
-  withdrawal through the wallet works. Step 11 has the exact commands.
+- [Humid](https://github.com/BlockstreamResearch/humid) 1.1.5, the browser-extension
+  wallet that Step 11 downloads and loads.
 - [Simplex](https://github.com/BlockstreamResearch/smplx) 0.2.0 for Step 2's tests,
   installed with its `simplexup` installer; the tests also need a Rust toolchain.
 - [LWK](https://github.com/Blockstream/lwk) for the page itself, built to wasm with

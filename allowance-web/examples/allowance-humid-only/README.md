@@ -19,19 +19,11 @@ the contract both need a real origin.
 The page doesn't need `wasm-pack`, Rust, `--features simplicity`, a `vendor/` directory,
 `npm install` or a bundler.
 
-Humid has one requirement, without which the page doesn't work:
-
-- **The patch** (`../allowance-humid/humid-allowance-fixes.patch`), applied to your Humid
-  checkout and rebuilt. It fixes two upstream bugs: without the first, every withdrawal is
-  refused as `unimplemented-construct`; without the second, `FullWithdraw` fails as
-  "pays nothing, so there is nothing to build".
-
-Every action also shows Humid's own "Perform a contract action?" confirmation. That is
+The page needs Humid 1.1.5 or newer. Every action also shows Humid's own "Perform a contract action?" confirmation. That is
 where you approve each transaction, not a sign of a missing permission.
 
-The whole lifecycle works through a patched Humid on Liquid testnet: `Fund`,
-`PartialWithdraw`, and `FullWithdraw` closing an allowance. `FullWithdraw` needs the second of the patch's two fixes; without the patch
-at all, nothing past `Fund` works.
+The whole lifecycle works through Humid on Liquid testnet: `Fund`, `PartialWithdraw`, and
+`FullWithdraw` closing an allowance.
 
 ## The comparison this is for
 
@@ -42,13 +34,13 @@ at all, nothing past `Fund` works.
 | Build step | none | `wasm-pack build --release --target web -- --features simplicity` |
 | Toolchain needed | none | Rust, `wasm-pack`, LLVM with a wasm32 backend |
 | External dependencies | 3 CDN imports, used once | one wasm module of about 15 MB |
-| Runtime requirement | Humid installed **and patched** | nothing |
+| Runtime requirement | Humid 1.1.5 or newer installed | nothing |
 
 So the wallet-driven path is a little under half the code and none of the toolchain. The
 build step is the sharper difference of the two: more interface work would close the gap in
 line count, and would still leave this page with nothing to compile. The tradeoff is that it
-is easier to *build* and harder to *run*, since it needs an extension that is installed,
-patched, and granted the right method.
+is easier to *build* and harder to *run*, since it needs an extension that is installed and
+granted the right method.
 
 ## What this page still has to do itself
 

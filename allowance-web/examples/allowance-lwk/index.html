@@ -127,10 +127,8 @@ to the Humid wallet extension as a txmanifest.</p>
   and broadcasting itself, showing you its own confirmation.</label>
   <div id="humid-box" hidden>
     <p class="note">Humid reads <code>txmanifest.humid.json</code> from this directory
-    (<code>manifest_version 0.1.0</code>) and holds its own funds and key. It needs
-    <code>examples/allowance-humid/humid-allowance-fixes.patch</code> applied. Without
-    it every withdrawal is refused with <code>unimplemented-construct</code>, and the last one,
-    a <code>FullWithdraw</code>, with <em>"pays nothing, so there is nothing to build"</em>.</p>
+    (<code>manifest_version 0.1.0</code>) and holds its own funds and key. It needs Humid
+    1.1.5 or newer.</p>
     <p class="note"><strong>Fund Humid itself before pressing Fund.</strong> Send testnet coins
     to the receive address shown in the extension, for example through the
     <a href="https://liquidtestnet.com/faucet" target="_blank" rel="noopener">faucet web
@@ -424,12 +422,16 @@ const NEXT_STEPS = [
    "the browser adds the extension only to pages loaded after it. Otherwise, check the " +
    "extension is enabled at chrome://extensions, that this page is on http:// rather " +
    "than file://, and that you are in the profile Humid is installed in."],
-  [/unimplemented-construct|relative timelock/i,
-   "The un-patched relative-timelock bug: apply " +
-   "examples/allowance-humid/humid-allowance-fixes.patch, rebuild with bun run build, and " +
-   "reload the extension."],
-  [/pays nothing/i,
-   "The un-patched FullWithdraw bug; the same patch fixes it. Rebuild and reload."],
+  [/would inherit that wait/i,
+   "Humid sets aside a fee based on its current fee estimate, and that's more than this " +
+   "withdrawal can spare from the instance: the allowance amount for a partial withdrawal, " +
+   "or the whole balance for a full one. Humid would need a coin of its own to make up the " +
+   "difference, and the contract allows only one input. Testnet fee estimates sometimes spike, " +
+   "so wait a while and try again. Locking a whole multiple of the allowance keeps the last " +
+   "withdrawal at a full allowance, not a smaller remainder that's more exposed to this."],
+  [/time-lock the outputs funding it|pays nothing, so there is nothing to build/i,
+   "This Humid is older than 1.1.5, which can't build this contract's withdrawals. " +
+   "Install Humid 1.1.5 or newer, then reload this page."],
   [/null pointer passed to rust/i,
    "A wasm handle was used after a method consumed it. Builder methods move the builder, " +
    "and getSighashAll/run/finalizeTransaction consume the TxOut array, so build a fresh one " +
@@ -441,6 +443,10 @@ const NEXT_STEPS = [
    "The wasm build has no Simplicity support. Rebuild with: wasm-pack build --release " +
    "--target web -- --features simplicity, then copy lwk_wasm.js and lwk_wasm_bg.wasm " +
    "into vendor/."],
+  [/expected instance of/i,
+   "vendor/ holds an LWK build from a different commit than the one this page is written " +
+   "for, and its functions take different arguments. Check out the LWK commit the tutorial " +
+   "names, rebuild, and copy lwk_wasm.js and lwk_wasm_bg.wasm into vendor/ again."],
   [/insufficient funds|shortfall|nothing funding it/i,
    "The spending wallet is short of testnet LBTC. Top it up from the faucet and sync."],
   [/non-BIP68-final/i,
@@ -1430,6 +1436,7 @@ function freshWitnessUtxo(prevTxHex, vout) {
   return out;
 }
 
+
 // A claim is "busy" from the moment its button is clicked until it resolves,
 // including while the confirmation dialog is open, which is the window a plain
 // in-flight flag misses. Exactly one claim may occupy that window, page-wide.
@@ -1524,6 +1531,7 @@ async function doClaim(inst) {
     if (usingHumid()) {
       // Humid would only find this out by running the contract, as "Jet failed during
       // execution", which says nothing about keys.
+      await knownHumidKey();
       if (humidKeyMatches() === false) {
         throw new Error(
           "These terms name BENEFICIARY_KEY " + c.params.benkey.slice(0, 16) + "…, but this " +
@@ -1532,7 +1540,7 @@ async function doClaim(inst) {
         );
       }
       const warnFull = inst.action === "FullWithdraw"
-        ? "\n\nThis closes the allowance. It needs the patched Humid."
+        ? "\n\nThis closes the allowance."
         : "";
       show("out-claim", "Waiting for you to confirm…");
       const ok = await askConfirm(
@@ -1649,8 +1657,9 @@ async function doClaim(inst) {
 
     // Sign the Simplicity sighash with the beneficiary's BIP340 key, then satisfy
     // witness::SIGNATURE with it.
+    const controlBlock = c.program.controlBlock(c.internalKey);
     const sighash = c.program.getSighashAll(
-      tx, c.internalKey, [freshWitnessUtxo(prevTxHex, inst.vout)], 0, network);
+      tx, controlBlock, [freshWitnessUtxo(prevTxHex, inst.vout)], 0, network);
     log("sighash", sighash);
 
     const signature = kp.signSchnorr(sighash);
@@ -1660,14 +1669,14 @@ async function doClaim(inst) {
     // Run the contract locally before paying for a broadcast. A failure here is the
     // contract refusing, and the log level gives the jet trace.
     const result = c.program.run(
-      tx, c.internalKey, [freshWitnessUtxo(prevTxHex, inst.vout)], 0,
+      tx, controlBlock, [freshWitnessUtxo(prevTxHex, inst.vout)], 0,
       new L.SimplicityWitnessValues().addValue(
         "SIGNATURE", L.SimplicityTypedValue.fromByteArrayHex(signature)),
       network, L.SimplicityLogLevel.Debug);
     log("local run ok, pruned cmr", result.cmr.toString());
 
     const finalTx = c.program.finalizeTransaction(
-      tx, c.internalKey, [freshWitnessUtxo(prevTxHex, inst.vout)], 0,
+      tx, controlBlock, [freshWitnessUtxo(prevTxHex, inst.vout)], 0,
       witness, network, L.SimplicityLogLevel.None);
 
     if (dryRun) {
@@ -1742,6 +1751,18 @@ let humidKey = null;
 function humidKeyMatches() {
   if (!humidKey || !contract) return null;
   return contract.params.benkey === humidKey;
+}
+
+// Reads Humid's key if this page load hasn't yet, so the key check before a Humid claim
+// still runs after a reload. Doesn't touch the beneficiary key field. Fund deliberately
+// doesn't call it: funding for someone else's key is the normal two-party case.
+async function knownHumidKey() {
+  if (!humidKey) {
+    humidKey = (await humidBeneficiaryKey()).xonly;
+    log("humid beneficiary key:", humidKey);
+    updateHints();
+  }
+  return humidKey;
 }
 let humidManifest = null;
 

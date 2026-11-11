@@ -33,22 +33,20 @@ feature flag that is off by default and marked unstable upstream:
 simplicity = ["lwk_simplicity"]
 ```
 
-1. Build it, from an `lwk` checkout, **into its own output directory**:
+1. Build it, from an `lwk` checkout at the commit the page is written for,
+   **into its own output directory**:
    ```
-   cd <lwk>/lwk_wasm
+   cd <lwk>
+   git checkout 6412ff6bfd823a0cd36d4d07d2f5aee01d6c9c01
+   cd lwk_wasm
    wasm-pack build --release --target web --out-dir pkg-web -- --features simplicity
    ```
    `--target web` matters: it emits an ES module with a default `init` export that a plain
    `<script type="module">` can load. The `bundler` target expects Vite or webpack.
 
-   **`--out-dir pkg-web` matters just as much.** The default `pkg/` is what Humid consumes
-   as a `file:` dependency, and it needs the *bundler* target. Building the web target into
-   `pkg/` overwrites that and breaks every Humid wallet call with
-   `WebAssembly.instantiate(): Import #0 "wbg": module is not an object or function`,
-   because the bundler-target glue code (`lwk_wasm_bg.js`) is left behind, stale, next to a
-   `.wasm` it no longer matches. If you have already done this, restore Humid with
-   `wasm-pack build --release --target bundler -- --features simplicity`, then
-   `bun install && bun run build`.
+   **`--out-dir pkg-web`** keeps this build apart from the default `pkg/`, which holds the
+   *bundler*-target build that other projects in the same checkout may depend on. Building
+   the web target into `pkg/` would overwrite theirs.
 
    Builds take a while: `wasm-opt` alone runs for minutes on a module this size. To skip
    it while iterating, either use `--dev` (no `wasm-opt`, debug build, slower at runtime)
@@ -106,7 +104,8 @@ point the import in `index.html` at wherever your package manager puts it.
    then explicit outputs in the order `recursive_covenant()` requires (continuation at 0,
    payout at 1, fee at 2; an Elements fee output is an explicit output with an empty
    script), then `getSighashAll` → `signSchnorr` → `run` locally → `finalizeTransaction`
-   → `broadcastTx`.
+   → `broadcastTx`. The three Simplicity calls take the spend's control block, from
+   `program.controlBlock(internalKey)`.
 
 ## The two signing paths
 
@@ -123,12 +122,8 @@ before learns it from a manifest. Requirements and caveats:
 
 - Humid must be installed in this browser profile and injecting into the page, so serve over
   `http://`, not `file://`.
-- **It needs the relative-timelock patch** (`../allowance-humid/humid-allowance-fixes.patch`).
-  Without it every withdrawal is refused with `unimplemented-construct`, because upstream
-  rejects any input declaring `sequence.relative_blocks` without checking the input count.
-- `FullWithdraw` is broken in *unpatched* Humid: it refuses an action whose only output is
-  policy-asset change with *"pays nothing, so there is nothing to build."* The page warns
-  about this in the confirmation dialog before the failure occurs.
+- **It needs Humid 1.1.5 or newer.** Earlier releases refuse every withdrawal of this
+  contract.
 - Humid signs with its own BIP84 key at `m/84'/1'/0'/0/0`, which it exposes nowhere in its
   UI. "Get my key from Humid" recovers it by calling `getWalletDescriptor` and doing two
   non-hardened BIP32 steps, printing the raw descriptor alongside so the derivation is
@@ -139,11 +134,11 @@ before learns it from a manifest. Requirements and caveats:
   compiling.
 - The indexer is this page's either way: Humid has no address-based UTXO lookup.
 
-On the manifest format, checked against the Humid checkout rather than assumed: this build
+On the manifest format, checked against Humid's source rather than assumed: Humid
 reads `manifest_version` but never validates it (`corpus.test.ts` deletes the field to prove
 it isn't load-bearing), and `document/registry.ts` (a machine-readable list of which fields
 it reads, shows, ignores or hasn't implemented) accepts both the `contract_templates` and
-the older `classes` container. Every field in `txmanifest.humid.json` is one this build
+the older `classes` container. Every field in `txmanifest.humid.json` is one Humid
 reads, with no unknown or ignored keys. So the `0.1.0`-versus-`0.3.0` difference against
 `tx-manifest-wallet` is cosmetic for Humid's purposes.
 
@@ -280,22 +275,3 @@ whose covenant value *didn't* have to be public would get far more from it.
 - **Fees come out of the allowance.** `enforce_single_input()` permits exactly one input,
   so nothing outside the covenant can contribute to the fee. `WITHDRAW_FEE_SATS` is a
   flat constant taken from the payout; real fee estimation is left out on purpose.
-
-## Open questions
-
-The assumptions most likely to be wrong, roughly from most to least likely:
-
-1. **The witness value encoding.** `SIGNATURE` is built with
-   `SimplicityTypedValue.fromByteArrayHex(sig)`. If the compiler wants a declared
-   `Signature` type instead, the alternative is
-   `SimplicityTypedValue.parse(sig, SimplicityType.fromString("Signature"))`.
-2. **`program_public_key`.** `getSighashAll`, `run` and `finalizeTransaction` all take
-   one; the page passes the NUMS internal key, on the reasoning that it is needed to
-   rebuild the control block. If it means something else, every withdrawal fails here.
-3. **The fee output.** Built as an explicit output with `Script.empty()`. If `PsetBuilder`
-   wants the fee expressed another way, `recursive_covenant()`'s `output_is_fee(2)` check
-   will fail even though the amounts are right.
-4. **`extractTx()` on a hand-built v2 PSET** with only explicit outputs, with no blinding
-   pass; plausible, unconfirmed.
-5. **Whether `TxBuilder.finish(wollet)` tolerates an explicit recipient** alongside its
-   normal blinded change, in step 5.
