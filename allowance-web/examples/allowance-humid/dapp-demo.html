@@ -74,6 +74,15 @@
     max-width: 420px; box-shadow: 0 10px 40px rgba(0,0,0,.2); }
   .modal-box p { font-size: .9rem; margin: 0 0 1rem; white-space: pre-wrap; }
   .modal-box .row { justify-content: flex-end; margin-top: 0; }
+  /* Links that open a new tab end with the usual external-link arrow. Screen readers
+     announce the alternative text after the slash instead of the arrow; browsers that
+     don't support it fall back to the first declaration. */
+  a[target="_blank"]::after {
+    content: "\2197";
+    content: "\2197" / " (opens in a new tab)";
+    margin-left: 0.15em;
+    font-size: 0.85em;
+  }
 </style>
 </head>
 <body>

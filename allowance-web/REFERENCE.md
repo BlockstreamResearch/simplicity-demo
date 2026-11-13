@@ -35,11 +35,11 @@ are relative to the root of Humid's source repository. Humid changes quickly, so
 | `[object Object]` instead of a message | the real text is in the thrown error's data | read `reject` and `reason` off it |
 | `No handler for method` | a chain method called directly | tunnel it through `wallet_invokeMethod` |
 | `non-BIP68-final` | not enough blocks have passed | wait; the [timelock](https://docs.simplicity-lang.org/glossary/#timelock) is working |
-| `Expecting value: line 1 column 1 (char 0)` from `python3 -m json.tool` | [Esplora](https://docs.simplicity-lang.org/glossary/#esplora) replied with an error message instead of JSON, usually because a placeholder such as `<fund-txid>` is still in the command, or because of a rate limit | run the `curl` command on its own, without `python3 -m json.tool`, to see Esplora's reply; replace the placeholder with the value the page showed, or after an HTTP 429, see "Chain access" |
 | `Esplora is rate-limiting this page (HTTP 429)`, or `Esplora is throttling requests, so the page won't scan the wallet…` | `blockstream.info` is refusing requests from your address after a burst | stop pressing **Sync & show balance**, **Refresh status** and **Claim**, and wait; the refusal can last an hour or more, and requests sent during it may extend it |
 | `ALLOWANCE_AMOUNT is smaller than the fee.` on a claim | the allowance was compiled with an `ALLOWANCE_AMOUNT` of 500 sats or less, which the page's 500-sat fee would use up | the page can't claim from this allowance; compile a new one with a larger **Withdrawable per period**, as in Step 6 |
 | `insufficient fee, rejecting replacement` | a previous attempt already reached the mempool | check the explorer before retrying; it probably succeeded |
 | `window.humid is missing` | extension disabled, wrong profile, page opened as `file://`, or page already open when Humid was loaded, enabled or reloaded | enable it, serve over `http://`, and reload the page |
+| `Failed to fetch dynamically imported module` after **Get my key from Humid** | the page couldn't load its key-derivation libraries from `cdn.jsdelivr.net`, usually because a content blocker, a proxy or the network blocks that host | allow `cdn.jsdelivr.net` for the page, for example by turning off a content blocker for `localhost`, and press the button again |
 | `Manifest file is missing or unreadable` from **Load unpacked** | the folder selected isn't the `humid` folder that Step 11 unpacked, which holds `manifest.json` | select `allowance-web/humid`; if it's missing or empty, run Step 11's download block again |
 | `expected instance of ControlBlock`, or of another LWK class, on a claim | `vendor/` holds an LWK build from a different commit than the one Step 3 checks out, and its functions take different arguments | in your LWK clone, check out the commit Step 3 names, rebuild, and copy the two files into `vendor/` again |
 | `null pointer passed to rust` | a wasm handle used after a call consumed it | build a fresh `TxOut` per call; reassign after every builder step |
@@ -242,9 +242,19 @@ also needs `anyhow`.
 
 ## Chain access
 
-From a browser, use `https://blockstream.info/liquidtestnet/api`, which sends the CORS
+From a browser, use the [Esplora](https://docs.simplicity-lang.org/glossary/#esplora) API at
+`https://blockstream.info/liquidtestnet/api`, which sends the CORS
 headers a page needs. Scripts and servers can use `https://liquid.network/liquidtestnet/api`,
 which serves the same API.
+
+The tutorial's on-chain checks have JSON equivalents under either base URL:
+`/tx/<txid>` for a transaction, `/address/<address>/utxo` for the instances at the
+covenant address, and `/blocks/tip/height` for the tip [height](https://docs.simplicity-lang.org/glossary/#height).
+The page's indexer, `loadInstances()`, uses the last two. An entry in the `utxo` list is
+confirmed when it has `status.block_height`, and its depth is
+`tip - block_height + 1`. The instance is spendable once its depth reaches
+`MIN_DISTANCE`, and its action is `FullWithdraw` when its `value` is at most
+`ALLOWANCE_AMOUNT`, and `PartialWithdraw` otherwise.
 
 `blockstream.info` answers a burst of requests with HTTP 429 and then refuses requests from
 that address for a long time, so pace automatic refreshing against how long there is left
@@ -254,7 +264,7 @@ The page syncs its wallet through the same Esplora, with a
 client created as `new EsploraClient(network, url, false, 1, false)`. A sync sends one
 request per wallet address, 40 or more, one after another, so the page runs one sync at a
 time and doesn't start one while it's backing off after a 429. Covenant lookups, the tip
-[height](https://docs.simplicity-lang.org/glossary/#height) and broadcasts go to the same server.
+height and broadcasts go to the same server.
 
 The faucet at `liquidtestnet.com/api/faucet?address=…&action=lbtc` doesn't send any CORS headers. A
 browser can dispatch the request with `mode: "no-cors"` and the faucet receives it, but the

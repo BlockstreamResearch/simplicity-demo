@@ -61,6 +61,15 @@
   #ask-body { white-space:pre-wrap; background:#f4f4f1; border:1px solid var(--line);
               border-radius:5px; padding:10px 12px; margin:10px 0 4px;
               font-family:ui-monospace,Menlo,monospace; font-size:12.5px; }
+  /* Links that open a new tab end with the usual external-link arrow. Screen readers
+     announce the alternative text after the slash instead of the arrow; browsers that
+     don't support it fall back to the first declaration. */
+  a[target="_blank"]::after {
+    content: "\2197";
+    content: "\2197" / " (opens in a new tab)";
+    margin-left: 0.15em;
+    font-size: 0.85em;
+  }
 </style>
 </head>
 <body>
@@ -248,7 +257,27 @@ const SCOPE = "bip122:a771da8e52ee6ad581ed1e9a99825e5b";   // Liquid testnet CAI
 const LS = "allowance-humid-only";
 
 const $ = (id) => document.getElementById(id);
-const show = (id, text, cls) => { const e = $(id); e.textContent = text; e.className = "out " + (cls || ""); };
+// Sets an output box's text, turning each https:// URL and each Liquid testnet address
+// (tex1… or confidential tlq1…, both of which the explorer accepts) into a link that opens
+// in a new tab, so following one doesn't navigate away from the page. Bare hex stays plain
+// text, since it may be a key or a txid that was never broadcast.
+const LINKABLE = /(https:\/\/[^\s]+|\b(?:tex1|tlq1)[02-9ac-hj-np-z]{20,}\b)/;
+const setLinkedText = (el, text) => {
+  el.replaceChildren();
+  for (const part of String(text).split(LINKABLE)) {
+    const url = part.startsWith("https://") ? part
+      : /^(tex1|tlq1)/.test(part) && LINKABLE.test(part)
+      ? "https://blockstream.info/liquidtestnet/address/" + part : null;
+    if (!url) { el.append(part); continue; }
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = part;
+    el.append(a);
+  }
+};
+const show = (id, text, cls) => { const e = $(id); setLinkedText(e, text); e.className = "out " + (cls || ""); };
 const log = (...p) => { $("log").textContent += new Date().toISOString().slice(11,19) + "  " + p.join(" ") + "\n"; };
 const hex = (b) => Array.from(b, (x) => x.toString(16).padStart(2,"0")).join("");
 
@@ -256,6 +285,10 @@ const hex = (b) => Array.from(b, (x) => x.toString(16).padStart(2,"0")).join("")
 // messages say what went wrong and never what to do next, and most of these are
 // one-time setup problems rather than anything about this contract.
 const NEXT_STEPS = [
+  [/Failed to fetch dynamically imported module/i,
+   "The page couldn't load its key-derivation libraries from cdn.jsdelivr.net. Allow that " +
+   "host for this page, for example by turning off a content blocker for localhost, and " +
+   "try again."],
   [/unlock the wallet/i,
    "Humid is locked. Open it: click the puzzle-piece Extensions button at the top right " +
    "of the browser, then Humid (pin it there to save a click next time). Enter your " +
